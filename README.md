@@ -11,13 +11,11 @@ Not affiliated with TTD.
 ## Install
 
 1. **[Download ttd-quickfill.zip](https://github.com/gautamxdev/ttd-quickfill/raw/main/ttd-quickfill.zip)** and unzip it.
-2. Open `chrome://extensions` and turn on **Developer mode** (top-right).
-3. Click **Load unpacked** and choose the unzipped folder.
+2. Open `chrome://extensions` 
+3. drag the zip file in extension to use
 4. Pin **TTD QuickFill** and click its icon to open the side panel.
 
-Dragging the `.zip` itself onto Chrome does not work. Unzip it first.
-
-**Update:** unzip the new zip over the same folder, click **Reload** on the extension card, then reload the TTD tab.
+if Dragging the `.zip` itself onto Chrome didnt work. Unzip it first.
 
 ## Use
 
