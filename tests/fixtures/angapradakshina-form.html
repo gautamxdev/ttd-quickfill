@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TTD Online Services</title>
+  </head>
+  <body>
+    <!-- Synthetic fixture. Uses aria-label / aria-labelledby and heading-delimited rows. -->
+    <h1>Angapradakshinam</h1>
+    <div class="booking">
+      <p>Selected date is shown here and is never filled.</p>
+      <h2>Pilgrim Details</h2>
+      <div class="pilgrim-row">
+        <h3>Pilgrim 1</h3>
+        <div class="grid">
+          <span id="r1-name-lbl">Pilgrim Name</span>
+          <input aria-labelledby="r1-name-lbl" type="text" />
+          <input aria-label="Age" type="text" inputmode="numeric" />
+          <select aria-label="Gender">
+            <option value="">Select</option>
+            <option>MALE</option>
+            <option>FEMALE</option>
+          </select>
+          <select aria-label="ID Proof Type">
+            <option value="">Select</option>
+            <option>AADHAR</option>
+            <option>PASSPORT</option>
+          </select>
+          <input aria-label="ID Proof Number" type="text" />
+          <input aria-label="Mobile No." type="tel" />
+        </div>
+      </div>
+      <div class="pilgrim-row">
+        <h3>Pilgrim 2</h3>
+        <div class="grid">
+          <span id="r2-name-lbl">Pilgrim Name</span>
+          <input aria-labelledby="r2-name-lbl" type="text" />
+          <input aria-label="Age" type="text" inputmode="numeric" />
+          <select aria-label="Gender">
+            <option value="">Select</option>
+            <option>MALE</option>
+            <option>FEMALE</option>
+          </select>
+          <select aria-label="ID Proof Type">
+            <option value="">Select</option>
+            <option>AADHAR</option>
+            <option>PASSPORT</option>
+          </select>
+          <input aria-label="ID Proof Number" type="text" />
+          <input aria-label="Mobile No." type="tel" />
+        </div>
+      </div>
+      <button type="button" id="add-pilgrim" onclick="window.__added = true">Add Pilgrim</button>
+    </div>
+  </body>
+</html>

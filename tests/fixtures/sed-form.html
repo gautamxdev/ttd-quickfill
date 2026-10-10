@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TTD Online Services</title>
+    <style>
+      .hidden-block { display: none; }
+    </style>
+  </head>
+  <body>
+    <!-- Synthetic fixture. Structure is an assumption for testing, NOT a copy of the live portal. -->
+    <header><h1>Special Entry Darshan (₹300)</h1></header>
+    <main>
+      <section aria-label="Booking summary">
+        <label for="darshanDate">Darshan Date</label>
+        <select id="darshanDate"><option value="">Select</option><option value="d1">Day 1</option></select>
+        <label for="slot">Time Slot</label>
+        <select id="slot"><option value="">Select</option><option value="s1">Slot A</option></select>
+        <label for="persons">No. of Persons</label>
+        <input id="persons" type="number" value="2" />
+      </section>
+
+      <h2>Pilgrim Details</h2>
+      <form id="pilgrim-form" onsubmit="window.__submitted = true; return false;">
+        <fieldset id="p1">
+          <legend>Pilgrim 1</legend>
+          <label for="p1-name">Name</label>
+          <input id="p1-name" type="text" />
+          <label for="p1-age">Age</label>
+          <input id="p1-age" type="number" />
+          <label for="p1-gender">Gender</label>
+          <select id="p1-gender">
+            <option value="">-- Select --</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="T">Transgender</option>
+          </select>
+          <label for="p1-idtype">Photo ID Proof</label>
+          <select id="p1-idtype">
+            <option value="" disabled selected>Select ID</option>
+            <option value="AADHAR">Aadhaar Card</option>
+            <option value="PASSPORT">Passport</option>
+            <option value="VOTER">Voter ID</option>
+            <option value="DL">Driving License</option>
+          </select>
+          <label for="p1-idno">Photo ID Number</label>
+          <input id="p1-idno" type="text" />
+        </fieldset>
+
+        <fieldset id="p2">
+          <legend>Pilgrim 2</legend>
+          <label for="p2-name">Name</label>
+          <input id="p2-name" type="text" />
+          <label for="p2-age">Age</label>
+          <input id="p2-age" type="number" />
+          <label for="p2-gender">Gender</label>
+          <select id="p2-gender">
+            <option value="">-- Select --</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="T">Transgender</option>
+          </select>
+          <label for="p2-idtype">Photo ID Proof</label>
+          <select id="p2-idtype">
+            <option value="" disabled selected>Select ID</option>
+            <option value="AADHAR">Aadhaar Card</option>
+            <option value="PASSPORT">Passport</option>
+            <option value="VOTER">Voter ID</option>
+            <option value="DL">Driving License</option>
+          </select>
+          <label for="p2-idno">Photo ID Number</label>
+          <input id="p2-idno" type="text" />
+        </fieldset>
+
+        <div class="hidden-block">
+          <label for="ghost-name">Name</label>
+          <input id="ghost-name" type="text" />
+        </div>
+
+        <div class="captcha-box">
+          <img alt="captcha image" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" />
+          <label for="captchaInput">Enter Captcha</label>
+          <input id="captchaInput" type="text" />
+        </div>
+        <button type="submit" id="submit">Continue</button>
+      </form>
+    </main>
+  </body>
+</html>

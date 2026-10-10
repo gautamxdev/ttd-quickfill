@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "TTD QuickFill — SED & Angapradakshina",
+  "short_name": "TTD QuickFill",
+  "version": "0.1.0",
+  "description": "Independent, local-only helper that fills saved pilgrim details into the visible SED and Angapradakshina forms when you click Fill Details. Not affiliated with TTD.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "sidePanel"],
+  "host_permissions": ["https://ttdevasthanams.ap.gov.in/*"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open TTD QuickFill"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://ttdevasthanams.ap.gov.in/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'none'"
+  }
+}
