@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tirumala Tirupati Devasthanams</title>
+    <style>
+      .cdk-overlay-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+      .mat-select-panel { pointer-events: auto; position: absolute; top: 100px; left: 100px; background: #fff; opacity: 0; transition: opacity 120ms; }
+      .mat-select-panel.shown { opacity: 1; }
+      mat-select, mat-form-field, mat-option { display: block; min-height: 20px; }
+    </style>
+  </head>
+  <body>
+    <!-- Synthetic fixture modelled on Angular Material's legacy mat-form-field
+      markup (the style of the live Sri PAT page). NOT a copy of the portal. -->
+    <div class="page-title">Special Entry Darshan (Sri PAT)</div>
+    <div class="card"><div class="card-title">Darshan Details</div><span>Darshan Date</span> <span>19/10/2026</span></div>
+    <div class="card">
+      <div class="card-title">Pilgrim Details</div>
+      <form id="pilgrims" onsubmit="window.__submitted = true; return false;"></form>
+    </div>
+    <button id="continue" onclick="window.__continued = true">Continue</button>
+    <div class="cdk-overlay-container"></div>
+    <script>
+      let uid = 0;
+      const field = (label, inner) =>
+        `<mat-form-field>${inner}<label for="${inner.match(/id="([^"]+)"/)[1]}"><mat-label>${label}</mat-label><span aria-hidden="true">*</span></label></mat-form-field>`;
+      const input = (label, type) => field(label, `<input id="mat-input-${uid++}" type="${type}" />`);
+      const select = (label, opts) => {
+        const id = `mat-select-${uid++}`;
+        return field(
+          label,
+          `<mat-select role="combobox" id="${id}" tabindex="0" data-options="${opts.join("|")}" aria-labelledby="${id}-value">` +
+            `<div class="mat-select-trigger"><div class="mat-select-value" id="${id}-value"><span class="mat-select-placeholder mat-select-min-line"></span></div></div></mat-select>`,
+        );
+      };
+      const row = () =>
+        `<div class="row">${input("Name", "text")}${input("Age", "number")}${select("Gender", ["Male", "Female", "Transgender"])}` +
+        `${select("Photo ID Proof", ["Aadhar Card", "Passport", "Voter ID"])}${input("Photo Id Number", "text")}</div>`;
+      document.getElementById("pilgrims").innerHTML = row() + row();
+
+      window.__model = {};
+      for (const sel of document.querySelectorAll("mat-select")) {
+        const close = () => {
+          document.getElementById(`${sel.id}-panel`)?.remove();
+          sel.removeAttribute("aria-owns");
+          sel.setAttribute("aria-expanded", "false");
+        };
+        sel.querySelector(".mat-select-trigger").addEventListener("click", () => {
+          if (document.getElementById(`${sel.id}-panel`)) return;
+          const panel = document.createElement("div");
+          panel.id = `${sel.id}-panel`;
+          panel.className = "mat-select-panel";
+          panel.setAttribute("role", "listbox");
+          sel.dataset.options.split("|").forEach((text, n) => {
+            const opt = document.createElement("mat-option");
+            opt.id = `${sel.id}-opt-${n}`;
+            opt.setAttribute("role", "option");
+            opt.textContent = text;
+            opt.addEventListener("click", () => {
+              sel.querySelector(".mat-select-value").innerHTML =
+                `<span class="mat-select-value-text"><span class="mat-select-min-line">${text}</span></span>`;
+              window.__model[sel.id] = text;
+              close();
+            });
+            panel.appendChild(opt);
+          });
+          document.querySelector(".cdk-overlay-container").appendChild(panel);
+          sel.setAttribute("aria-expanded", "true");
+          sel.setAttribute("aria-owns", [...panel.children].map((c) => c.id).join(" "));
+          requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add("shown")));
+        });
+        sel.addEventListener("keydown", (e) => e.key === "Escape" && close());
+      }
+    </script>
+  </body>
+</html>

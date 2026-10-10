@@ -34,9 +34,11 @@ export const SEMANTIC_KEY_LABELS: Record<SemanticKey, string> = {
   pincode: "Pincode",
 };
 
-export type ControlType = "text" | "number" | "tel" | "email" | "select" | "textarea";
+/** "custom-select" is a framework dropdown (Angular Material mat-select or a role=combobox element). */
+export type ControlType = "text" | "number" | "tel" | "email" | "select" | "custom-select" | "textarea";
 
-export type LabelSource = "label" | "aria-label" | "aria-labelledby";
+/** wrapping-label: a <label> in the same wrapper as the control, with no `for`. */
+export type LabelSource = "label" | "aria-label" | "aria-labelledby" | "wrapping-label";
 
 export interface SelectOptionInfo {
   text: string;
@@ -70,7 +72,7 @@ export interface DiscoveredField {
   note?: string;
 }
 
-export type SectionStyle = "fieldset-legend" | "aria-group" | "heading";
+export type SectionStyle = "fieldset-legend" | "aria-group" | "heading" | "row-group";
 
 export interface PilgrimSectionInfo {
   index: number;
@@ -116,6 +118,11 @@ export interface ScanResponse {
   issues: Issue[];
   /** True when detection succeeded and there are no critical issues. */
   fillable: boolean;
+  /**
+   * True when the live form's labels wrap the control (TTD's floating fields)
+   * and the page rejects scripted writes. The panel copies values for you to paste.
+   */
+  copyAssist: boolean;
 }
 
 export interface FillAssignment {

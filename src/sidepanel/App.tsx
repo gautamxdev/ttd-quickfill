@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PilgrimProfile } from "../types/profile";
-import type { ContentEvent, FillResponse, ScanResponse, ServiceId } from "../types/form";
+import type { ContentEvent, ScanResponse, ServiceId } from "../types/form";
 import { SERVICE_LABELS } from "../types/form";
-import { approveSections, recordFillOutcome } from "../lib/approvals";
 import { getActiveTab, sendToContent, type ActiveTab } from "../lib/messaging";
 import { deleteProfile, duplicateProfile, emptyProfile, mergeImportedProfiles, upsertProfile } from "../lib/profiles";
-import { buildAssignments, computeReadiness } from "../lib/readiness";
+import { computeCopyReadiness } from "../lib/readiness";
 import { parseImportFile, storage, type ApprovalMap } from "../lib/storage";
-import { FieldMappingPreview } from "./components/FieldMappingPreview";
-import { FillButton } from "./components/FillButton";
-import { FillResults } from "./components/FillResults";
+import { CopyAssist } from "./components/CopyAssist";
 import { Header } from "./components/Header";
 import { PageStatus } from "./components/PageStatus";
 import { PrivacyNotice } from "./components/PrivacyNotice";
@@ -31,11 +28,6 @@ export function App() {
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [fillResult, setFillResult] = useState<FillResponse | null>(null);
-  const [fillError, setFillError] = useState<string[] | null>(null);
-  const [overwrites, setOverwrites] = useState<string[]>([]);
-  const [showMapping, setShowMapping] = useState(false);
 
   const selectedProfiles = useMemo(
     () => selectedIds.map((id) => profiles.find((p) => p.id === id)).filter((p): p is PilgrimProfile => p !== undefined),
@@ -55,15 +47,12 @@ export function App() {
     const t = await getActiveTab().catch(() => null);
     setTab((prev) => {
       if (prev?.id === t?.id && prev?.url === t?.url) return prev;
-      setFillResult(null);
-      setOverwrites([]);
       return t;
     });
   }, []);
 
   const runScan = useCallback(async () => {
     setScanError(null);
-    setFillError(null);
     if (!tab?.approved) {
       setScan(null);
       return;
@@ -100,7 +89,6 @@ export function App() {
   useEffect(() => {
     const onMessage = (msg: ContentEvent, sender: chrome.runtime.MessageSender) => {
       if (msg?.type === "TTDQF_PAGE_CHANGED" && sender.tab?.id === tab?.id && ready) {
-        setOverwrites([]);
         void runScan();
       }
     };
@@ -108,7 +96,7 @@ export function App() {
     return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, [tab, ready, runScan]);
 
-  const readiness = computeReadiness({ service, scan, selected: selectedProfiles, approvals });
+  const copy = computeCopyReadiness(service, selectedProfiles);
 
   const persistProfiles = async (next: PilgrimProfile[]) => {
     await storage.saveProfiles(next);
@@ -119,38 +107,6 @@ export function App() {
   const updateApprovals = async (next: ApprovalMap) => {
     setApprovals(next);
     await storage.saveApprovals(next);
-  };
-
-  const onFill = async () => {
-    if (!tab || !service) return;
-    setBusy(true);
-    setFillError(null);
-    try {
-      const fresh = await sendToContent<ScanResponse>(tab, { type: "TTDQF_SCAN", service });
-      setScan(fresh);
-      const r = computeReadiness({ service, scan: fresh, selected: selectedProfiles, approvals });
-      if (!r.canFill) {
-        setFillError(r.reasons);
-        return;
-      }
-      const response = await sendToContent<FillResponse>(tab, {
-        type: "TTDQF_FILL",
-        request: {
-          scanId: fresh.scanId,
-          service,
-          approvedStructures: Object.fromEntries(r.usedSections.map((s) => [s.index, s.structureId])),
-          assignments: buildAssignments(r.usedSections, selectedProfiles),
-          approvedOverwrites: overwrites,
-        },
-      });
-      setFillResult(response);
-      if (response.outcome !== "blocked") setOverwrites([]);
-      await updateApprovals(recordFillOutcome(approvals, r.usedSections, service, response));
-    } catch (e) {
-      setFillError([e instanceof Error ? e.message : "Fill failed."]);
-    } finally {
-      setBusy(false);
-    }
   };
 
   const downloadExport = async () => {
@@ -215,16 +171,14 @@ export function App() {
     );
   }
 
-  const showPreview = readiness.usedSections.length > 0 && service && scan && (readiness.approval !== "tested" || showMapping);
-
   return (
     <>
       {header}
       <PrivacyNotice />
-      <ServiceSelector value={service} onChange={(s) => setService(s)} disabled={busy} />
+      <ServiceSelector value={service} onChange={(s) => setService(s)} />
       {service && (
         <p className="hint">
-          Filling for: <span className="service-current">{SERVICE_LABELS[service]}</span>
+          Copying for: <span className="service-current">{SERVICE_LABELS[service]}</span>
         </p>
       )}
       <PageStatus tab={tab} scan={scan} scanError={scanError} scanning={scanning} onRescan={() => void runScan()} />
@@ -255,58 +209,10 @@ export function App() {
         onCreate={() => setView({ kind: "edit", profile: emptyProfile(), isNew: true })}
       />
 
-      {showPreview && (
-        <FieldMappingPreview
-          service={service}
-          sections={readiness.usedSections}
-          profiles={selectedProfiles}
-          issues={scan.issues}
-          approval={readiness.approval}
-          liveVerified={scan.adapter?.liveVerified ?? false}
-          onApprove={() => void updateApprovals(approveSections(approvals, readiness.usedSections, service))}
-        />
+      {service && (
+        <CopyAssist service={service} profiles={selectedProfiles} ready={copy.ready} reasons={copy.reasons} />
       )}
-      {readiness.approval === "tested" && readiness.usedSections.length > 0 && (
-        <button type="button" className="link" onClick={() => setShowMapping((s) => !s)}>
-          {showMapping ? "Hide field mapping" : "Show field mapping"}
-        </button>
-      )}
-
-      <section className="card" aria-label="Fill">
-        {readiness.reasons.length > 0 && (
-          <div className="banner warn">
-            <b>Fill Details is disabled:</b>
-            <ul>
-              {readiness.reasons.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {readiness.canFill && readiness.approval === "tested" && (
-          <p className="hint">Verified layout — one click fills {selectedProfiles.length} pilgrim(s).</p>
-        )}
-        <FillButton disabled={!readiness.canFill} busy={busy} onFill={() => void onFill()} />
-        {overwrites.length > 0 && <p className="hint">{overwrites.length} field(s) will be overwritten on the next fill.</p>}
-        {fillError && (
-          <div className="banner err" role="alert">
-            <ul>
-              {fillError.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <p className="hint">QuickFill never submits. Check every field on the TTD page, complete any CAPTCHA/OTP yourself and submit manually.</p>
-      </section>
-
-      {fillResult && (
-        <FillResults
-          result={fillResult}
-          approvedOverwrites={overwrites}
-          onToggleOverwrite={(id) => setOverwrites((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]))}
-        />
-      )}
+      <p className="hint">QuickFill never submits. Check every field on the TTD page, complete any CAPTCHA/OTP yourself and submit manually.</p>
     </>
   );
 }

@@ -51,7 +51,7 @@ export function scanPage(doc: Document, loc: LocationLike, selected: ServiceId |
   const containers = new Map<number, Element>();
   const detection = detectService(doc, loc, Object.values(ADAPTER_CONFIGS));
   const empty = (issues: Issue[] = []): ScanState => ({
-    response: { scanId, detection, adapter: null, sections: [], issues, fillable: false },
+    response: { scanId, detection, adapter: null, sections: [], issues, fillable: false, copyAssist: false },
     elements,
     containers,
     consumed: false,
@@ -111,6 +111,7 @@ export function scanPage(doc: Document, loc: LocationLike, selected: ServiceId |
       issues,
       // Section-scoped critical issues only block that section; page-level ones block everything.
       fillable: sections.length > 0 && !issues.some((i) => i.critical && i.sectionIndex === undefined),
+      copyAssist: sections.some((s) => s.fields.some((f) => f.status === "mapped" && f.labelSource === "wrapping-label")),
     },
     elements,
     containers,

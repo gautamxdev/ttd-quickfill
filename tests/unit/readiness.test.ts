@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { approveSections, recordFillOutcome } from "../../src/lib/approvals";
-import { buildAssignments, computeReadiness } from "../../src/lib/readiness";
+import { buildAssignments, computeCopyReadiness, computeReadiness } from "../../src/lib/readiness";
 import { scanPage } from "../../src/content/scanner";
 import type { FillResponse } from "../../src/types/form";
 import { loadFixture, makeProfile, officialLocation } from "../helpers";
@@ -12,6 +12,20 @@ function sedScan() {
 
 const one = makeProfile({ id: "one", label: "One" });
 const two = makeProfile({ id: "two", label: "Two", fullName: "TEST PILGRIM TWO" });
+
+describe("copy readiness", () => {
+  it("is ready once a complete pilgrim is selected, with no page scan", () => {
+    const r = computeCopyReadiness("sed", [one]);
+    expect(r.ready).toBe(true);
+    expect(r.reasons).toEqual([]);
+  });
+
+  it("asks for a service and a selected pilgrim", () => {
+    expect(computeCopyReadiness(null, []).reasons).toEqual(
+      expect.arrayContaining(["Select a service.", "Select at least one pilgrim profile."]),
+    );
+  });
+});
 
 describe("fill readiness", () => {
   it("requires a service and a scan", () => {

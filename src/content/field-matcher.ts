@@ -11,6 +11,7 @@ export type FieldRules = Partial<Record<SemanticKey, FieldRule>>;
 
 const TEXTUAL: readonly ControlType[] = ["text"];
 const NUMERIC: readonly ControlType[] = ["text", "number", "tel"];
+const DROPDOWN: readonly ControlType[] = ["select", "custom-select"];
 
 /**
  * Shared label vocabulary. Every pattern is anchored to the full label so
@@ -32,7 +33,7 @@ export const BASE_FIELD_RULES: Record<SemanticKey, FieldRule> = {
   },
   gender: {
     patterns: [/^(pilgrim |devotee )?(gender|sex)$/],
-    controlTypes: ["select"],
+    controlTypes: DROPDOWN,
   },
   photoIdType: {
     patterns: [
@@ -41,7 +42,7 @@ export const BASE_FIELD_RULES: Record<SemanticKey, FieldRule> = {
       /^(photo ?)?id proof$/,
       /^(select )?(photo ?)?id proof type$/,
     ],
-    controlTypes: ["select"],
+    controlTypes: DROPDOWN,
   },
   photoIdNumber: {
     patterns: [
@@ -69,11 +70,11 @@ export const BASE_FIELD_RULES: Record<SemanticKey, FieldRule> = {
   },
   city: {
     patterns: [/^(city|town|city\/town|town\/city)$/],
-    controlTypes: ["text", "select"],
+    controlTypes: ["text", ...DROPDOWN],
   },
   state: {
     patterns: [/^state$/],
-    controlTypes: ["text", "select"],
+    controlTypes: ["text", ...DROPDOWN],
   },
   pincode: {
     patterns: [/^(pin ?code|postal code|zip( code)?)$/],

@@ -36,7 +36,9 @@ describe("side panel app", () => {
 
     await user.click(screen.getByLabelText("Select Self"));
     await user.click(screen.getByLabelText("SED ₹300"));
-    expect(screen.getByRole("button", { name: "Fill Details" })).toBeDisabled();
+    expect(screen.getByText("Copy onto the page")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fill Details" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy Name" })).toBeEnabled();
     expect(chromeMock.sentMessages.some((m) => (m as { type: string }).type === "TTDQF_FILL")).toBe(false);
   });
 });

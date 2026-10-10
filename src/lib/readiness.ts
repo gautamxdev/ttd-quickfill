@@ -14,6 +14,8 @@ export interface Readiness {
   approval: ApprovalLevel;
   /** Ages that need a confirmation click before filling. */
   ageReviewIds: string[];
+  /** True when the scanned form only accepts a real paste or click. */
+  copyAssist: boolean;
 }
 
 export interface ReadinessInput {
@@ -57,17 +59,50 @@ export function buildAssignments(used: readonly PilgrimSectionInfo[], selected: 
   });
 }
 
+export interface CopyReadiness {
+  ready: boolean;
+  reasons: string[];
+  ageReviewIds: string[];
+}
+
+/** Profile-only checks for the copy-paste helper. Does not depend on the page scan. */
+export function computeCopyReadiness(
+  service: ServiceId | null,
+  selected: readonly PilgrimProfile[],
+  now: Date = new Date(),
+): CopyReadiness {
+  const reasons: string[] = [];
+  const ageReviewIds: string[] = [];
+  if (!service) reasons.push("Select a service.");
+  if (selected.length === 0) reasons.push("Select at least one pilgrim profile.");
+  for (const p of selected) {
+    const v = validateProfile(p, [], now);
+    if (v.errors.fullName) reasons.push(`${p.label}: ${v.errors.fullName}`);
+    if (v.errors.age) reasons.push(`${p.label}: ${v.errors.age}`);
+    if (v.errors.gender) reasons.push(`${p.label}: ${v.errors.gender}`);
+    if (v.errors.photoIdType) reasons.push(`${p.label}: ${v.errors.photoIdType}`);
+    if (v.errors.photoIdNumber) reasons.push(`${p.label}: ${v.errors.photoIdNumber}`);
+    if (p.age !== null && v.ageStatus !== "ok") {
+      ageReviewIds.push(p.id);
+      reasons.push(`${p.label}: ${describeAgeStatus(v.ageStatus)}`);
+    }
+  }
+  return { ready: reasons.length === 0, reasons, ageReviewIds };
+}
+
 export function computeReadiness(input: ReadinessInput): Readiness {
   const { service, scan, selected, approvals } = input;
   const now = input.now ?? new Date();
   const reasons: string[] = [];
   const ageReviewIds: string[] = [];
+  const copyAssist = scan?.copyAssist === true;
   const fail = (approval: ApprovalLevel = "unreviewed", used: PilgrimSectionInfo[] = []): Readiness => ({
     canFill: false,
     reasons,
     usedSections: used,
     approval,
     ageReviewIds,
+    copyAssist,
   });
 
   if (!service) reasons.push("Select a service.");
@@ -129,7 +164,13 @@ export function computeReadiness(input: ReadinessInput): Readiness {
   });
 
   const approval = approvalLevel(approvals, used, service!);
-  if (approval === "unreviewed") reasons.push("Review and confirm the field mapping below before filling.");
+  if (approval === "unreviewed") {
+    reasons.push(
+      copyAssist
+        ? "Review and confirm the field mapping below before copying values onto the page."
+        : "Review and confirm the field mapping below before filling.",
+    );
+  }
 
-  return { canFill: reasons.length === 0, reasons, usedSections: used, approval, ageReviewIds };
+  return { canFill: reasons.length === 0, reasons, usedSections: used, approval, ageReviewIds, copyAssist };
 }

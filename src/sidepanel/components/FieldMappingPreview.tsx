@@ -31,6 +31,10 @@ function describeStatus(f: DiscoveredField): string {
       return "Not filled (combined field)";
     case "unsupported-control":
       return "Not filled (unsupported control)";
+    default: {
+      const never: never = f.status;
+      return never;
+    }
   }
 }
 
@@ -44,6 +48,7 @@ function valueCell(service: ServiceId, f: DiscoveredField, profile: PilgrimProfi
     if (!m.ok) return m.reason === "no-match" ? `“${value}” — no matching option; will be skipped` : `“${value}” — several options match; will be skipped`;
     return `Option “${m.option.text}”`;
   }
+  if (f.controlType === "custom-select") return `“${value}” — matching dropdown option is picked when filling`;
   return displayValue(f.key, value);
 }
 

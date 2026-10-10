@@ -25,9 +25,9 @@ function offenders(files: { path: string; text: string }[], re: RegExp): string[
 }
 
 describe("manifest uses minimum permissions", () => {
-  it("requests only storage + sidePanel and the exact official host", () => {
+  it("requests only storage, sidePanel, clipboardWrite and the exact official host", () => {
     expect(manifest.manifest_version).toBe(3);
-    expect(manifest.permissions).toEqual(["storage", "sidePanel"]);
+    expect(manifest.permissions).toEqual(["storage", "sidePanel", "clipboardWrite"]);
     expect(manifest.host_permissions).toEqual(["https://ttdevasthanams.ap.gov.in/*"]);
     expect(manifest).not.toHaveProperty("optional_permissions");
     expect(manifest).not.toHaveProperty("optional_host_permissions");
@@ -74,15 +74,10 @@ describe("26. filling requires a direct user click", () => {
     expect(index).toMatch(/case "TTDQF_FILL":[\s\S]*executeFill/);
   });
 
-  it("the panel sends TTDQF_FILL only from the Fill Details handler", () => {
-    const senders = offenders(sources, /"TTDQF_FILL"/).filter((p) => p.startsWith("src/sidepanel"));
-    expect(senders).toEqual(["src/sidepanel/App.tsx"]);
-    const app = sources.find((s) => s.path === "src/sidepanel/App.tsx")!.text;
-    expect(app.match(/"TTDQF_FILL"/g)).toHaveLength(1);
-    const onFill = app.slice(app.indexOf("const onFill = async"), app.indexOf("const downloadExport"));
-    expect(onFill).toContain('"TTDQF_FILL"');
-    const button = sources.find((s) => s.path.endsWith("FillButton.tsx"))!.text;
-    expect(button).toMatch(/isTrustedUserEvent\(e\)/);
+  it("the side panel never sends a fill; copy buttons require a trusted click", () => {
+    expect(offenders(sources, /"TTDQF_FILL"/).filter((p) => p.startsWith("src/sidepanel"))).toEqual([]);
+    const copy = sources.find((s) => s.path.endsWith("CopyAssist.tsx"))!.text;
+    expect(copy).toMatch(/isTrustedUserEvent\(e\)/);
   });
 });
 
@@ -90,7 +85,14 @@ describe("27. nothing submits, clicks or navigates the booking page", () => {
   it("content script has no click/submit/navigation/keystroke automation", () => {
     const forbidden =
       /\.click\(|\.submit\(|requestSubmit|new (Mouse|Pointer|Keyboard|Touch|Submit|Input)Event|new Event\(["'](click|submit|keydown|keypress|keyup)|location\.(assign|replace|reload)|location\.href\s*=|history\.(push|replace)State|\.focus\(|execCommand|clipboard/;
-    expect(offenders(contentSources, forbidden)).toEqual([]);
+    // Framework dropdowns can only be operated by clicking their trigger and
+    // an option; that single, guarded module is the only exception.
+    expect(offenders(contentSources, forbidden)).toEqual(["src/content/custom-select.ts"]);
+    const dropdown = contentSources.find((s) => s.path === "src/content/custom-select.ts")!.text;
+    expect(dropdown).toMatch(/target\.closest\("a, button, \[role=button\], input/);
+    expect(dropdown).not.toMatch(/\.submit\(|requestSubmit|location\.|history\.|Enter/);
+    const navOrSubmit = /\.submit\(|requestSubmit|location\.(assign|replace|reload)|location\.href\s*=|history\.(push|replace)State/;
+    expect(offenders(contentSources, navOrSubmit)).toEqual([]);
     const dispatched = contentSources.flatMap((s) => [...s.text.matchAll(/new Event\(["'](\w+)["']/g)].map((m) => m[1]));
     expect(new Set(dispatched)).toEqual(new Set(["input", "change"]));
   });

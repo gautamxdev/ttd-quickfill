@@ -1,6 +1,6 @@
 {
   "name": "ttd-quickfill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "TTD QuickFill — local, user-triggered pilgrim-detail form filling for SED and Angapradakshina on the official TTD portal.",
   "license": "UNLICENSED",

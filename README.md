@@ -1,6 +1,11 @@
 # TTD QuickFill — SED & Angapradakshina
 
-A Manifest V3 Chrome extension that stores pilgrim details locally on this device and, **only when you click _Fill Details_**, fills the matching visible pilgrim-detail fields on the official TTD portal (<https://ttdevasthanams.ap.gov.in/>) for:
+A Manifest V3 Chrome extension that stores pilgrim details locally on this device for:
+
+- **Special Entry Darshan (SED, ₹300)** including Sri PAT
+- **Angapradakshina**
+
+On the live TTD pilgrim-details form the portal **rejects scripted typing**. The side panel therefore copies each value so you can paste it with a real Cmd+V / Ctrl+V, and tells you which Gender and Photo ID option to click. On layouts that still accept programmatic writes, **Fill Details** remains available.
 
 - **Special Entry Darshan (SED, ₹300)**
 - **Angapradakshina**
@@ -34,8 +39,8 @@ If a TTD tab was already open, refresh that tab once after installing.
 1. Open the official portal, sign in yourself (including OTP), and go to the SED or Angapradakshina **pilgrim-details** form.
 2. Open the side panel. Add pilgrim profiles, typing the details exactly as they appear on each photo ID.
 3. Pick the service (**SED ₹300** or **Angapradakshina**) and tick the pilgrims. Selection order decides placement: the first ticked pilgrim goes into the section labelled "Pilgrim 1", and so on.
-4. **First time on a form layout:** read the field-mapping preview (form label → control → value → status) and click **I have checked this mapping — enable filling**.
-5. Click **Fill Details**. All supported fields for the selected pilgrims are filled in one operation, then read back and reported in the results table.
+4. **First time on a form layout:** read the field-mapping preview and click **I have checked this mapping — enable filling**.
+5. On the live Sri PAT / SED form: use **Copy onto the page**. For Name, Age and Photo ID Number, click Copy, click the field on the TTD page, then paste (Cmd+V). For Gender and Photo ID Proof, open the list and click the option shown in the panel.
 6. Check the page yourself, complete any CAPTCHA/OTP, and submit manually.
 
 After one fill of a layout passes read-back verification with no failures, later fills of the same layout are one click. If the layout changes (labels, control types, field order, option lists, adapter version), it needs review again.
@@ -107,14 +112,16 @@ tests/
 
 ### Security and privacy
 
-- Permissions: `storage` and `sidePanel`; host access only to `https://ttdevasthanams.ap.gov.in/*`. No `tabs`, `scripting`, `cookies`, `webRequest` or `<all_urls>`.
+- Permissions: `storage`, `sidePanel` and `clipboardWrite` (copy buttons in the panel only); host access only to `https://ttdevasthanams.ap.gov.in/*`. No `tabs`, `scripting`, `cookies`, `webRequest` or `<all_urls>`.
 - Extension-page CSP: `script-src 'self'; connect-src 'none'`, so no remote code and no network requests from the panel.
 - No `fetch`, XHR, WebSocket or beacon calls anywhere in `src/`; a static test enforces this.
 - Stored data stays on this device: pilgrim profiles as local JSON, plus reviewed-layout descriptors (portal labels, control types and option texts only). There is no passphrase, lock, or cloud sync.
 - ID numbers, contact numbers and emails are masked in the panel UI.
 - Export/import is a JSON backup of profiles on this device. Import adds them as new entries.
 - Filling only starts from a trusted click (`event.isTrusted`) on **Fill Details**. The content script accepts messages only from this extension's own pages. Each scan id works for one fill only.
-- Writes use the native prototype `value` / `selectedIndex` setters, followed by bubbling `input` and `change` events. No framework internals, keystroke simulation or clipboard.
+- Writes use the native prototype `value` / `selectedIndex` setters, followed by bubbling `input` and `change` events. No framework internals, typing simulation or clipboard.
+- Angular Material dropdowns (`mat-select`) are the one exception: `src/content/custom-select.ts` clicks the dropdown's own trigger and the uniquely matching option (or presses Escape to close it). It refuses to click links or buttons, so Back/Continue/submit are never touched; a static test enforces this.
+- Pilgrim sections may also be titled by plain elements (e.g. `<div>Pilgrim Details</div>`), and one "Pilgrim Details" card holding several identical rows is split into Pilgrim 1..N in on-screen order.
 
 ## Verification status
 
@@ -140,7 +147,7 @@ The live booking forms sit behind a personal login with OTP and were **not inspe
 ### Unsupported
 
 - SRIVANI Trust Darshan and every other ticket category.
-- Custom (non-native) dropdowns such as Angular Material `mat-select` or React-Select. Gender and ID-type controls of this kind are reported as "unsupported control" and left for manual entry.
+- Custom dropdowns other than Angular Material `mat-select` and plain `role=combobox` listboxes (e.g. React-Select, ng-select). `mat-select` is supported: QuickFill clicks only that dropdown's trigger and the matching option, then reads the shown value back.
 - Radio-button gender selectors.
 - Pilgrim rows identified only by table position, or controls labelled only by placeholder. The extension refuses rather than guess.
 - Adding pilgrim rows, choosing dates/slots/quantities, CAPTCHA, OTP, login, payment, submission.

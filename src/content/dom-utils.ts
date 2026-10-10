@@ -1,6 +1,7 @@
 import type { ControlType, LabelSource, SelectOptionInfo } from "../types/form";
 
-export type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+/** A native input/select/textarea, or a custom dropdown element (see isCustomSelect). */
+export type FormControl = HTMLElement;
 
 export function collapseWhitespace(s: string): string {
   return s.replace(/\s+/g, " ").trim();
@@ -51,11 +52,12 @@ export function isRendered(el: Element): boolean {
 
 export function isEditable(el: FormControl): boolean {
   if (!el.isConnected) return false;
-  if (el.disabled || el.matches(":disabled")) return false;
+  if (isNativeControl(el) && (el.disabled || el.matches(":disabled"))) return false;
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
     if (el.readOnly) return false;
   }
   if (el.getAttribute("aria-disabled") === "true" || el.getAttribute("aria-readonly") === "true") return false;
+  if (isCustomSelect(el) && /select-disabled/.test(el.getAttribute("class") ?? "")) return false;
   return true;
 }
 
@@ -65,8 +67,27 @@ const IGNORED_INPUT_TYPES = new Set(["hidden", "submit", "button", "reset", "ima
 /** Input types that must never be touched (credentials, dates/slots, files). */
 const EXCLUDED_INPUT_TYPES = new Set(["password", "date", "time", "datetime-local", "month", "week", "file"]);
 
-export function isFormControl(el: Element): el is FormControl {
+export const CONTROL_SELECTOR = "input, select, textarea, mat-select, [role=combobox]";
+
+export type NativeControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+export function isNativeControl(el: Element): el is NativeControl {
   return el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement;
+}
+
+/**
+ * A framework dropdown: Angular Material <mat-select>, or a non-input
+ * role=combobox element that owns no native control (a combobox wrapping an
+ * <input> is the input's container, and the input itself is the control).
+ */
+export function isCustomSelect(el: Element): el is HTMLElement {
+  if (!(el instanceof HTMLElement) || isNativeControl(el)) return false;
+  if (el.tagName === "MAT-SELECT") return true;
+  return el.getAttribute("role") === "combobox" && el.querySelector("input, select, textarea") === null;
+}
+
+export function isFormControl(el: Element): el is FormControl {
+  return isNativeControl(el) || isCustomSelect(el);
 }
 
 export function isIgnoredControl(el: FormControl): boolean {
@@ -76,6 +97,7 @@ export function isIgnoredControl(el: FormControl): boolean {
 export function getControlType(el: FormControl): ControlType | "other" {
   if (el instanceof HTMLSelectElement) return el.multiple ? "other" : "select";
   if (el instanceof HTMLTextAreaElement) return "textarea";
+  if (!(el instanceof HTMLInputElement)) return isCustomSelect(el) ? "custom-select" : "other";
   switch (el.type) {
     case "text":
     case "search":
@@ -117,11 +139,20 @@ export interface AccessibleLabel {
 
 /**
  * Label lookup in the documented priority order:
- * associated <label>, aria-label, aria-labelledby. No placeholder,
- * proximity or positional heuristics.
+ * associated <label>, aria-label, aria-labelledby, then a wrapping <label>
+ * that shares a wrapper with only this control. No placeholder or
+ * neighbour-field proximity.
  */
+function associatedLabels(el: FormControl): HTMLLabelElement[] {
+  if (isNativeControl(el)) return el.labels ? Array.from(el.labels) : [];
+  // <label for> on a non-labelable element (Angular Material points its
+  // floating label at the mat-select id) is not exposed via .labels.
+  if (!el.id) return [];
+  return Array.from(el.ownerDocument.getElementsByTagName("label")).filter((l) => l.htmlFor === el.id);
+}
+
 export function accessibleLabel(el: FormControl): AccessibleLabel | null {
-  const labels = el.labels ? Array.from(el.labels) : [];
+  const labels = associatedLabels(el);
   const labelTexts = [...new Set(labels.map((l) => textExcludingControls(l)).filter(Boolean))];
   if (labelTexts.length > 0) {
     const distinct = new Set(labelTexts.map(normalizeLabel));
@@ -131,12 +162,44 @@ export function accessibleLabel(el: FormControl): AccessibleLabel | null {
   if (ariaLabel) return { text: ariaLabel, source: "aria-label", conflicting: false };
   const labelledBy = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean);
   if (labelledBy.length > 0) {
+    // References inside the control itself are its current value (mat-select
+    // lists its value span here); they are not part of the label.
     const parts = labelledBy
       .map((id) => el.ownerDocument.getElementById(id))
-      .filter((n): n is HTMLElement => n !== null)
+      .filter((n): n is HTMLElement => n !== null && !el.contains(n))
       .map((n) => textExcludingControls(n))
       .filter(Boolean);
     if (parts.length > 0) return { text: parts.join(" "), source: "aria-labelledby", conflicting: false };
+  }
+  return wrappingLabel(el);
+}
+
+/**
+ * A <label> that shares a wrapper with exactly this control and is not tied
+ * by `for`. Used by TTD's floating-label inputs (the label is a sibling, not
+ * associated). Stops at the first ancestor that contains another control, so
+ * a row of five fields cannot steal a neighbour's label.
+ */
+function wrappingLabel(el: FormControl): AccessibleLabel | null {
+  let node: Element | null = el.parentElement;
+  while (node && node !== el.ownerDocument.body && node !== el.ownerDocument.documentElement) {
+    const controls = Array.from(node.querySelectorAll(CONTROL_SELECTOR)).filter(
+      (c): c is FormControl => isFormControl(c) && !isIgnoredControl(c) && isRendered(c),
+    );
+    if (controls.length > 1) return null;
+    if (controls.length === 1 && controls[0] === el) {
+      const texts = [
+        ...new Set(
+          Array.from(node.querySelectorAll("label"))
+            .filter((l) => !l.htmlFor && isRendered(l))
+            .map((l) => textExcludingControls(l))
+            .filter(Boolean),
+        ),
+      ];
+      if (texts.length === 1) return { text: texts[0]!, source: "wrapping-label", conflicting: false };
+      if (texts.length > 1) return { text: texts.join(" | "), source: "wrapping-label", conflicting: true };
+    }
+    node = node.parentElement;
   }
   return null;
 }
@@ -180,8 +243,24 @@ export function readOptions(el: HTMLSelectElement): SelectOptionInfo[] {
 }
 
 /** Visible heading-like texts used as page signals. */
-export function visibleHeadings(doc: Document, maxLevel = 4): string[] {
-  const selector = [...Array(maxLevel).keys()].map((i) => `h${i + 1}`).join(",") + ",[role=heading]";
+export function visibleHeadings(doc: Document, maxLevel = 6): string[] {
+  // The portal is an Angular SPA whose page titles are often not semantic
+  // headings (div/span/mat-card-title), so title-like containers count too.
+  // Each text is capped: a title element holding a paragraph is layout noise,
+  // not a page signal.
+  const selector = [
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "[role=heading]",
+    "mat-card-title",
+    ".mat-card-title",
+    '[class*="title" i]',
+    '[class*="heading" i]',
+  ].join(",");
   const out: string[] = [];
   for (const el of Array.from(doc.querySelectorAll(selector))) {
     if (el.getAttribute("role") === "heading") {
@@ -190,9 +269,12 @@ export function visibleHeadings(doc: Document, maxLevel = 4): string[] {
     }
     if (!isRendered(el)) continue;
     const t = collapseWhitespace(el.textContent ?? "");
-    if (t) out.push(t);
+    if (!t || t.length > 200) continue;
+    // Skip elements whose text merely wraps a real heading child already seen.
+    if (el.querySelector("h1,h2,h3,h4,h5,h6,[role=heading],mat-card-title")) continue;
+    out.push(t);
   }
-  return out;
+  return [...new Set(out)];
 }
 
 const CAPTCHA_ATTR = /captcha/i;

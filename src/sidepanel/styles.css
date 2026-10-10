@@ -99,3 +99,7 @@ td.status-skipped_missing_value, td.status-skipped_unknown_field, td.status-skip
 tr.conflict { background: var(--err-bg); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .section-title { margin-top: 8px; font-weight: 600; }
+.copy-block { margin-top: 8px; }
+.copy-steps { margin: 6px 0 0; padding-left: 18px; }
+.copy-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+.copy-row button { flex: 0 0 auto; }

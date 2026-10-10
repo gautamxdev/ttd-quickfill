@@ -1,6 +1,7 @@
 import type { FieldResult, FillRequest, FillResponse, SemanticKey } from "../types/form";
 import { isSelectableOption, matchOption } from "../lib/option-match";
-import { isEditable, isRendered, readOptions, type FormControl } from "./dom-utils";
+import { chooseCustomOption, closeCustomSelect, customSelectValue, openCustomSelect } from "./custom-select";
+import { isCustomSelect, isEditable, isRendered, readOptions, type FormControl } from "./dom-utils";
 import { ADAPTER_CONFIGS } from "./form-adapters";
 import { verifyWrites, type PlannedWrite } from "./post-fill-verifier";
 import { scanPage, type ScanState } from "./scanner";
@@ -157,8 +158,27 @@ export async function executeFill(
           continue;
         }
         writes.push(write);
+      } else if (isCustomSelect(el)) {
+        // Options only exist while the dropdown is open, so the option is
+        // matched at write time; the current value is checked now.
+        const current = customSelectValue(el);
+        const currentMatches = current !== "" && matchOption([{ text: current, value: current, disabled: false }], value, aliases[key]?.[value] ?? []).ok;
+        const write: PlannedWrite = {
+          ...base,
+          key,
+          el,
+          expected: currentMatches ? current : value,
+          kind: "custom-select",
+          alreadyCorrect: currentMatches,
+          container: fresh.containers.get(a.sectionIndex)!,
+        };
+        if (current !== "" && !currentMatches && !approved.has(f.fieldId)) {
+          conflicts.push({ ...base, status: "conflict", expected: value, actual: current });
+          continue;
+        }
+        writes.push(write);
       } else {
-        const current = el.value;
+        const current = (el as HTMLInputElement | HTMLTextAreaElement).value;
         const write: PlannedWrite = {
           ...base,
           key,
@@ -215,6 +235,30 @@ export async function executeFill(
     }
     if (!isRendered(w.el) || !isEditable(w.el)) {
       results.push({ ...pick(w), status: "skipped_not_editable" });
+      continue;
+    }
+    if (w.kind === "custom-select") {
+      const opened = await openCustomSelect(w.el);
+      if (!opened) {
+        results.push({ ...pick(w), status: "skipped_not_editable", detail: "The dropdown did not open, so no option was chosen." });
+        continue;
+      }
+      const match = matchOption(opened.options, w.expected, aliases[w.key]?.[w.expected] ?? []);
+      if (!match.ok) {
+        await closeCustomSelect(w.el);
+        results.push({
+          ...pick(w),
+          status: "skipped_unmatched_option",
+          detail:
+            match.reason === "no-match"
+              ? `No available option matches "${w.expected}". Options: ${opened.options.map((o) => o.text).join(", ")}.`
+              : `Several options match "${w.expected}": ${match.candidates.join(", ")}.`,
+        });
+        continue;
+      }
+      w.expected = match.option.text;
+      await chooseCustomOption(w.el, opened.optionEls[match.index]!, match.option.text);
+      written.push(w);
       continue;
     }
     if (w.kind === "select") setSelectIndex(w.el as HTMLSelectElement, w.targetIndex!);

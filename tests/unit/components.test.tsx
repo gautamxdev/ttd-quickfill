@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CopyAssist } from "../../src/sidepanel/components/CopyAssist";
 import { FillButton } from "../../src/sidepanel/components/FillButton";
 import { FillResults } from "../../src/sidepanel/components/FillResults";
 import { FieldMappingPreview } from "../../src/sidepanel/components/FieldMappingPreview";
@@ -10,10 +11,13 @@ import { emptyProfile } from "../../src/lib/profiles";
 import { scanPage } from "../../src/content/scanner";
 import type { FillResponse } from "../../src/types/form";
 import { isTrustedUserEvent } from "../../src/sidepanel/user-gesture";
+import { copyText } from "../../src/lib/clipboard";
 import { loadFixture, makeProfile, officialLocation } from "../helpers";
 
 vi.mock("../../src/sidepanel/user-gesture", () => ({ isTrustedUserEvent: vi.fn(() => false) }));
+vi.mock("../../src/lib/clipboard", () => ({ copyText: vi.fn(async () => true) }));
 const trusted = vi.mocked(isTrustedUserEvent);
+const copyTextMock = vi.mocked(copyText);
 
 beforeEach(() => trusted.mockReturnValue(false));
 
@@ -142,6 +146,35 @@ describe("FieldMappingPreview", () => {
       />,
     );
     expect(screen.getByRole("button", { name: /I have checked this mapping/ })).toBeDisabled();
+  });
+});
+
+describe("CopyAssist", () => {
+  it("copies the full name on a trusted click and shows the Gender option to click", async () => {
+    trusted.mockReturnValue(true);
+    copyTextMock.mockResolvedValue(true);
+    render(
+      <CopyAssist
+        service="sed"
+        profiles={[makeProfile({ fullName: "TEST PILGRIM ONE", gender: "Male" })]}
+        ready
+        reasons={[]}
+      />,
+    );
+    expect(
+      screen.getByText((_, node) => node?.tagName === "LI" && node.textContent === "Click Gender → Male"),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Copy Name" }));
+    expect(copyTextMock).toHaveBeenCalledWith("TEST PILGRIM ONE");
+    expect(screen.getByRole("button", { name: /Copied — paste on the page/ })).toBeInTheDocument();
+  });
+
+  it("does not copy from an untrusted click", async () => {
+    trusted.mockReturnValue(false);
+    copyTextMock.mockClear();
+    render(<CopyAssist service="sed" profiles={[makeProfile()]} ready reasons={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Copy Name" }));
+    expect(copyTextMock).not.toHaveBeenCalled();
   });
 });
 

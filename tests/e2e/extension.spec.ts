@@ -167,6 +167,51 @@ test("Angapradakshina fixture fills aria-labelled, heading-delimited rows", asyn
   expect(await page.evaluate(() => (window as unknown as { __added?: boolean }).__added)).toBeUndefined();
 });
 
+test("Angular Material Sri PAT layout: div titles, mat-select dropdowns, two rows", async ({ context, sw }) => {
+  const page = await context.newPage();
+  const url = `${OFFICIAL}/spat/material-form.html`;
+  await page.goto(url);
+
+  const scan = await sendToTab<ScanResponse>(sw, url, { type: "TTDQF_SCAN", service: "sed" });
+  expect(scan.detection).toMatchObject({ ok: true, service: "sed" });
+  expect(scan.fillable).toBe(true);
+  expect(scan.sections.map((s) => s.index)).toEqual([1, 2]);
+  expect(scan.sections[0]!.fields.map((f) => [f.key, f.controlType])).toEqual([
+    ["fullName", "text"],
+    ["age", "number"],
+    ["gender", "custom-select"],
+    ["photoIdType", "custom-select"],
+    ["photoIdNumber", "text"],
+  ]);
+
+  const res = await sendToTab<FillResponse>(sw, url, {
+    type: "TTDQF_FILL",
+    request: {
+      scanId: scan.scanId,
+      service: "sed",
+      approvedStructures: { 1: scan.sections[0]!.structureId, 2: scan.sections[1]!.structureId },
+      assignments: [
+        assignment(1, "One", { fullName: "TEST PILGRIM ONE", age: "40", gender: "Male", photoIdType: "Aadhaar Card", photoIdNumber: "000011112222" }),
+        assignment(2, "Two", { fullName: "TEST PILGRIM TWO", age: "35", gender: "Female", photoIdType: "Passport", photoIdNumber: "P0000001" }),
+      ],
+      approvedOverwrites: [],
+    },
+  });
+  expect(res.results.filter((r) => r.status !== "filled")).toEqual([]);
+  expect(res.outcome).toBe("completed");
+  expect(res.verifiedCount).toBe(10);
+
+  const model = await page.evaluate(() => (window as unknown as { __model: Record<string, string> }).__model);
+  expect(Object.values(model)).toEqual(["Male", "Aadhar Card", "Female", "Passport"]);
+  await expect(page.locator(".row").nth(1).locator("input").first()).toHaveValue("TEST PILGRIM TWO");
+  await expect(page.locator("[role=listbox]")).toHaveCount(0);
+  const flags = await page.evaluate(() => {
+    const w = window as unknown as { __submitted?: boolean; __continued?: boolean };
+    return [w.__submitted, w.__continued];
+  });
+  expect(flags).toEqual([undefined, undefined]);
+});
+
 test("SRIVANI page is rejected in the real browser", async ({ context, sw }) => {
   const page = await context.newPage();
   const url = `${OFFICIAL}/fixtures/unsupported-form.html`;
@@ -197,7 +242,8 @@ test("side panel renders under the extension CSP and saves a profile without err
   await page.getByRole("button", { name: "Save profile" }).click();
   await page.getByLabel("Select Self").check();
   await page.getByLabel("SED ₹300").check({ force: true });
-  await expect(page.getByRole("button", { name: "Fill Details" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Copy Name" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Fill Details" })).toHaveCount(0);
   await page.screenshot({ path: "test-results/sidepanel.png", fullPage: true });
   const stored = await sw.evaluate(() => chrome.storage.local.get(null));
   expect(JSON.stringify(stored)).toContain("TEST PILGRIM ONE");

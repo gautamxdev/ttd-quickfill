@@ -1,7 +1,7 @@
 import type { DiscoveredField, Issue } from "../../types/form";
 import { SEMANTIC_KEY_LABELS } from "../../types/form";
-import { accessibleLabel, getControlType, isExcludedControl, readOptions, type FormControl } from "../dom-utils";
-import { classifyControl } from "../field-matcher";
+import { accessibleLabel, getControlType, isExcludedControl, isNativeControl, readOptions, type FormControl } from "../dom-utils";
+import { classifyControl, matchingKeys } from "../field-matcher";
 import { controlsIn, discoverSections, type RawSection } from "../form-discovery";
 import { detectService, type ServiceSignature } from "../service-detector";
 import type { AdapterConfig, FieldMappingResult, ServiceAdapter, ValidationResult } from "./types";
@@ -34,8 +34,19 @@ export function createServiceAdapter(config: AdapterConfig, allSignatures: () =>
           excludedControls.push(el);
           continue;
         }
-        const controlType = getControlType(el);
         const label = accessibleLabel(el);
+        let controlType = getControlType(el);
+        // TTD floating dropdowns are read-only text inputs with a wrapping label.
+        if (
+          controlType === "text" &&
+          isNativeControl(el) &&
+          el instanceof HTMLInputElement &&
+          el.readOnly &&
+          label &&
+          matchingKeys(label.text, config.fieldRules).some((k) => k === "gender" || k === "photoIdType" || k === "city" || k === "state")
+        ) {
+          controlType = "custom-select";
+        }
         const options = el instanceof HTMLSelectElement ? readOptions(el) : undefined;
         const base = { sectionIndex: section.index, controlType, options };
 

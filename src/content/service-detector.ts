@@ -121,11 +121,21 @@ export function detectService(
   if (matches.length === 0) {
     const captcha = findCaptchaElements(doc).length > 0;
     if (captcha) return blocked("captcha", "A CAPTCHA page is visible. CAPTCHAs are never touched.");
+    const seen =
+      textSignals.filter(Boolean).length > 0
+        ? ` Headings seen: ${textSignals
+            .filter(Boolean)
+            .slice(0, 8)
+            .map((t) => `"${t.slice(0, 80)}"`)
+            .join(", ")}.`
+        : " No headings were visible to the extension on this page.";
     return {
       ok: false,
       service: null,
       blockedBy: null,
-      reasons: ["No supported service (SED ₹300 or Angapradakshina) is identified by a visible heading on this page."],
+      reasons: [
+        "No supported service (SED ₹300 or Angapradakshina) is identified by a visible heading on this page." + seen,
+      ],
       evidence: [],
       notices: [],
     };

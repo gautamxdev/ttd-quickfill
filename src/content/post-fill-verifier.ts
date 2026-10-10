@@ -1,5 +1,6 @@
 import type { FieldResult, SemanticKey } from "../types/form";
-import { normalizeOptionText, type FormControl } from "./dom-utils";
+import { customSelectValue } from "./custom-select";
+import { isNativeControl, normalizeOptionText, type FormControl } from "./dom-utils";
 
 export interface PlannedWrite {
   fieldId: string;
@@ -9,15 +10,40 @@ export interface PlannedWrite {
   profileLabel: string;
   el: FormControl;
   container: Element;
-  /** Text value for inputs; option text for selects. */
+  /** Text value for inputs; option text for selects (custom selects: set once the option is chosen). */
   expected: string;
-  kind: "text" | "select";
+  kind: "text" | "select" | "custom-select";
   targetIndex?: number;
   alreadyCorrect: boolean;
 }
 
 function reportsInvalid(el: FormControl): boolean {
-  return el.getAttribute("aria-invalid") === "true" || (el.validity !== undefined && !el.validity.valid);
+  return el.getAttribute("aria-invalid") === "true" || (isNativeControl(el) && !el.validity.valid);
+}
+
+function readBack(w: PlannedWrite): { actual: string; matches: boolean } {
+  switch (w.kind) {
+    case "select": {
+      const sel = w.el as HTMLSelectElement;
+      const opt = sel.options[sel.selectedIndex];
+      const actual = opt ? opt.text.trim() : "";
+      const matches =
+        sel.selectedIndex === w.targetIndex && opt !== undefined && normalizeOptionText(opt.text) === normalizeOptionText(w.expected);
+      return { actual, matches };
+    }
+    case "custom-select": {
+      const actual = customSelectValue(w.el);
+      return { actual, matches: actual !== "" && normalizeOptionText(actual) === normalizeOptionText(w.expected) };
+    }
+    case "text": {
+      const actual = (w.el as HTMLInputElement | HTMLTextAreaElement).value;
+      return { actual, matches: actual === w.expected };
+    }
+    default: {
+      const never: never = w.kind;
+      throw new Error(`Unhandled write kind ${String(never)}`);
+    }
+  }
 }
 
 /**
@@ -41,17 +67,7 @@ export function verifyWrites(writes: readonly PlannedWrite[]): FieldResult[] {
         detail: "The control was replaced or removed after filling, so its value could not be confirmed.",
       };
     }
-    let actual: string;
-    let matches: boolean;
-    if (w.kind === "select") {
-      const sel = w.el as HTMLSelectElement;
-      const opt = sel.options[sel.selectedIndex];
-      actual = opt ? opt.text.trim() : "";
-      matches = sel.selectedIndex === w.targetIndex && opt !== undefined && normalizeOptionText(opt.text) === normalizeOptionText(w.expected);
-    } else {
-      actual = w.el.value;
-      matches = actual === w.expected;
-    }
+    const { actual, matches } = readBack(w);
     if (!matches) {
       return {
         ...base,
