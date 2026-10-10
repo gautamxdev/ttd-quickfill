@@ -1,65 +1,47 @@
-import type { ContentEvent, ContentRequest, FillResponse, ScanResponse } from "../types/form";
-import { watchPage } from "./page-watch";
-import { executeFill } from "./safe-fill";
-import { scanPage, type ScanState } from "./scanner";
+import { writeClipboard } from "../lib/clipboard";
+import { isApprovedUrl } from "../lib/format";
+import type { ContentEvent, ContentRequest, QueueState } from "../types/queue";
+import { createPasteQueue, type PasteQueue } from "./paste-queue";
 import { isTrustedSender } from "./sender";
-import { isApprovedLocation } from "./service-detector";
 
-let lastScan: ScanState | null = null;
-let filling = false;
-
-function handle(
-  msg: ContentRequest,
-  sendResponse: (r: { ok: true } | ScanResponse | FillResponse | { error: string }) => void,
-): boolean {
+function handle(queue: PasteQueue, msg: ContentRequest): { ok: true } | QueueState {
   switch (msg.type) {
     case "TTDQF_PING":
-      sendResponse({ ok: true });
-      return false;
-    case "TTDQF_SCAN":
-      if (filling) {
-        sendResponse({ error: "A fill operation is in progress." });
-        return false;
-      }
-      lastScan = scanPage(document, location, msg.service);
-      sendResponse(lastScan.response);
-      return false;
-    case "TTDQF_FILL":
-      if (filling) {
-        sendResponse({ error: "A fill operation is already in progress." });
-        return false;
-      }
-      filling = true;
-      executeFill(document, location, lastScan, msg.request)
-        .then(({ response, state }) => {
-          lastScan = state;
-          sendResponse(response);
-        })
-        .catch(() => sendResponse({ error: "The fill operation failed unexpectedly. Check the page before continuing." }))
-        .finally(() => {
-          filling = false;
-        });
-      return true;
-    default:
-      return false;
+      return { ok: true };
+    case "TTDQF_QUEUE_START":
+      return queue.start(msg.values, msg.position);
+    case "TTDQF_QUEUE_SEEK":
+      return queue.seek(msg.position);
+    case "TTDQF_QUEUE_STOP":
+      return queue.stop();
+    case "TTDQF_QUEUE_STATE":
+      return queue.state();
+    default: {
+      const unhandled: never = msg;
+      throw new Error(`Unknown message: ${JSON.stringify(unhandled)}`);
+    }
   }
 }
 
-if (isApprovedLocation(location)) {
-  chrome.runtime.onMessage.addListener((msg: ContentRequest, sender, sendResponse) => {
-    if (!isTrustedSender(sender, chrome.runtime.id, chrome.runtime.getURL(""))) return false;
-    if (!isApprovedLocation(location)) {
-      sendResponse({ error: "Unapproved page." });
-      return false;
-    }
-    return handle(msg, sendResponse);
+if (isApprovedUrl(location.href)) {
+  const queue = createPasteQueue({
+    writeClipboard,
+    notify: (state) => {
+      const event: ContentEvent = { type: "TTDQF_QUEUE_PROGRESS", state };
+      chrome.runtime.sendMessage(event).catch(() => undefined);
+    },
+    afterPaste: (fn) => setTimeout(fn, 0),
   });
 
-  watchPage(document, () => {
-    lastScan = null;
-    const event: ContentEvent = { type: "TTDQF_PAGE_CHANGED", url: location.href };
-    chrome.runtime.sendMessage(event).catch(() => {
-      // Side panel not open; nothing to notify.
-    });
+  document.addEventListener("paste", (e) => queue.onPaste(e), true);
+
+  chrome.runtime.onMessage.addListener((msg: ContentRequest, sender, sendResponse) => {
+    if (!isTrustedSender(sender, chrome.runtime.id, chrome.runtime.getURL(""))) return false;
+    try {
+      sendResponse(handle(queue, msg));
+    } catch {
+      sendResponse({ error: "Unknown request." });
+    }
+    return false;
   });
 }

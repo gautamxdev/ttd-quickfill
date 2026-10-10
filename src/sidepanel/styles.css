@@ -51,9 +51,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 button.primary { background: var(--maroon); color: #fff; border-color: var(--maroon); }
 button.primary:hover:not(:disabled) { background: var(--maroon-dark); }
 button.danger { color: var(--err); }
-button.link { border: none; background: none; padding: 0; color: var(--maroon); text-decoration: underline; }
 button.small { padding: 2px 7px; font-size: 12px; }
-button.fill { width: 100%; padding: 10px; font-size: 15px; font-weight: 600; }
 
 :focus-visible { outline: 2px solid var(--maroon); outline-offset: 2px; }
 
@@ -69,16 +67,6 @@ input.masked { -webkit-text-security: disc; }
 .row > * { flex: 1; }
 .row.tight > * { flex: 0 0 auto; }
 
-.segmented { display: flex; gap: 6px; }
-.segmented label {
-  flex: 1; text-align: center; border: 1px solid var(--border); border-radius: 6px; padding: 7px; cursor: pointer; background: #fff;
-}
-.segmented input { position: absolute; opacity: 0; pointer-events: none; }
-.segmented label.selected { border-color: var(--maroon); background: var(--maroon-tint); color: var(--maroon); font-weight: 600; }
-.segmented input:focus-visible + span { outline: 2px solid var(--maroon); outline-offset: 2px; }
-
-.service-current { font-weight: 600; color: var(--maroon); }
-
 .profile-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start; }
 .profile-card.selected { border-color: var(--maroon); background: #fffafa; }
 .profile-card .grow { flex: 1; min-width: 0; }
@@ -90,16 +78,15 @@ input.masked { -webkit-text-security: disc; }
 .badge.order { background: var(--maroon); color: #fff; }
 .actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th, td { text-align: left; padding: 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { color: var(--muted); font-weight: 500; }
-td.status-filled, td.status-already_correct { color: var(--ok); }
-td.status-failed_rejected, td.status-unsupported_form_changed, td.status-conflict { color: var(--err); font-weight: 500; }
-td.status-skipped_missing_value, td.status-skipped_unknown_field, td.status-skipped_unmatched_option, td.status-skipped_not_editable { color: var(--warn); }
-tr.conflict { background: var(--err-bg); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .section-title { margin-top: 8px; font-weight: 600; }
 .copy-block { margin-top: 8px; }
 .copy-steps { margin: 6px 0 0; padding-left: 18px; }
-.copy-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
-.copy-row button { flex: 0 0 auto; }
+
+.next-paste { border: 2px solid var(--maroon); background: var(--maroon-tint); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+.next-paste .next-what { font-size: 15px; font-weight: 600; color: var(--maroon); }
+.next-paste .mono { font-size: 14px; }
+.queue-actions { margin: 6px 0; }
+.queue-actions button.primary { flex: 1; padding: 8px; font-size: 14px; font-weight: 600; }
+.queue-item.done { color: var(--ok); }
+.queue-item.current { font-weight: 600; color: var(--maroon); }

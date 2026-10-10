@@ -9,7 +9,7 @@ beforeEach(() => {
 });
 
 describe("side panel app", () => {
-  it("opens without a vault, adds a profile, and never sends a fill without a click", async () => {
+  it("opens without a vault, adds a profile and previews its paste queue without messaging the page", async () => {
     const { App } = await import("../../src/sidepanel/App");
     const user = userEvent.setup();
     render(<App />);
@@ -17,7 +17,7 @@ describe("side panel app", () => {
     expect(await screen.findByText("TTD QuickFill")).toBeInTheDocument();
     expect(screen.getByText(/not affiliated with TTD/)).toBeInTheDocument();
     expect(screen.queryByText(/passphrase/i)).toBeNull();
-    expect(screen.getByText(/active tab is not the official TTD portal/)).toBeInTheDocument();
+    expect(screen.getByText(/sign in yourself and go to the pilgrim-details form/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "+ Add profile" }));
     await user.type(screen.getByLabelText("Profile label"), "Self");
@@ -35,10 +35,12 @@ describe("side panel app", () => {
     expect(JSON.stringify(chromeMock.store)).toContain("T7654321");
 
     await user.click(screen.getByLabelText("Select Self"));
-    await user.click(screen.getByLabelText("SED ₹300"));
-    expect(screen.getByText("Copy onto the page")).toBeInTheDocument();
+    expect(screen.getByText("Paste queue")).toBeInTheDocument();
+    expect(screen.getByText("Pilgrim 1 ← Self")).toBeInTheDocument();
+    expect(screen.getByText("TEST PANEL PILGRIM", { selector: ".mono" })).toBeInTheDocument();
+    expect(screen.getByText("••••4321")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Fill Details" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Copy Name" })).toBeEnabled();
-    expect(chromeMock.sentMessages.some((m) => (m as { type: string }).type === "TTDQF_FILL")).toBe(false);
+    expect(chromeMock.sentMessages).toEqual([]);
   });
 });

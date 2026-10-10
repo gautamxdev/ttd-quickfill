@@ -1,37 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import type { LocationLike } from "../src/content/service-detector";
 import type { PilgrimProfile } from "../src/types/profile";
-
-export const FIXTURES = resolve(import.meta.dirname, "fixtures");
-
-export function officialLocation(path = "/"): LocationLike {
-  return {
-    protocol: "https:",
-    hostname: "ttdevasthanams.ap.gov.in",
-    port: "",
-    href: `https://ttdevasthanams.ap.gov.in${path}`,
-    pathname: path,
-    hash: "",
-  };
-}
-
-export function locationFor(url: string): LocationLike {
-  const u = new URL(url);
-  return { protocol: u.protocol, hostname: u.hostname, port: u.port, href: u.href, pathname: u.pathname, hash: u.hash };
-}
-
-/** Loads a fixture into the jsdom document (inline scripts do not run). */
-export function loadHtml(html: string): void {
-  const parsed = new DOMParser().parseFromString(html, "text/html");
-  document.title = parsed.title;
-  document.head.innerHTML = parsed.head.innerHTML;
-  document.body.innerHTML = parsed.body.innerHTML;
-}
-
-export function loadFixture(name: string): void {
-  loadHtml(readFileSync(resolve(FIXTURES, name), "utf8"));
-}
 
 /** Clearly synthetic test identities — never real pilgrim data. */
 export function makeProfile(overrides: Partial<PilgrimProfile> = {}): PilgrimProfile {
@@ -49,15 +16,13 @@ export function makeProfile(overrides: Partial<PilgrimProfile> = {}): PilgrimPro
   };
 }
 
-export function byId<T extends HTMLElement = HTMLInputElement>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`#${id} missing in fixture`);
-  return el as T;
-}
+type RuntimeListener = (msg: unknown, sender: chrome.runtime.MessageSender) => void;
 
 export interface ChromeMock {
   store: Record<string, unknown>;
   sentMessages: unknown[];
+  /** Delivers a message to the side panel as if a content script sent it. */
+  emitRuntimeMessage: (msg: unknown, sender: chrome.runtime.MessageSender) => void;
 }
 
 /** Minimal chrome.* surface used by the side panel and storage helpers. */
@@ -65,6 +30,11 @@ export function installChromeMock(): ChromeMock {
   const store: Record<string, unknown> = {};
   const sentMessages: unknown[] = [];
   const listeners = { addListener: () => undefined, removeListener: () => undefined };
+  const runtimeListeners = new Set<RuntimeListener>();
+  const onMessage = {
+    addListener: (fn: RuntimeListener) => void runtimeListeners.add(fn),
+    removeListener: (fn: RuntimeListener) => void runtimeListeners.delete(fn),
+  };
   const mock = {
     storage: {
       local: {
@@ -95,8 +65,12 @@ export function installChromeMock(): ChromeMock {
       onActivated: listeners,
       onUpdated: listeners,
     },
-    runtime: { id: "test-extension", onMessage: listeners, getURL: (p: string) => `chrome-extension://test-extension/${p}` },
+    runtime: { id: "test-extension", onMessage, getURL: (p: string) => `chrome-extension://test-extension/${p}` },
   };
   (globalThis as unknown as { chrome: unknown }).chrome = mock;
-  return { store, sentMessages };
+  return {
+    store,
+    sentMessages,
+    emitRuntimeMessage: (msg, sender) => runtimeListeners.forEach((fn) => fn(msg, sender)),
+  };
 }

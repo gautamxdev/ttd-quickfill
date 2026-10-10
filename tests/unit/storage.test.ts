@@ -17,12 +17,14 @@ describe("local profile storage", () => {
     expect(await storage.loadProfiles()).toEqual([]);
   });
 
-  it("discards leftover encrypted vault data on load", async () => {
+  it("discards leftover vault and reviewed-layout data from older versions on load", async () => {
+    const p = makeProfile({ id: "a", label: "Self" });
+    await storage.saveProfiles([p]);
     chromeMock.store.vault = { format: "ttd-quickfill-vault", version: 1 };
     chromeMock.store.settings = { autoLockMinutes: 5 };
-    expect(await storage.loadProfiles()).toEqual([]);
-    expect(chromeMock.store.vault).toBeUndefined();
-    expect(chromeMock.store.settings).toBeUndefined();
+    chromeMock.store.approvals = { "sed:abc": { status: "reviewed" } };
+    expect(await storage.loadProfiles()).toEqual([p]);
+    expect(Object.keys(chromeMock.store)).toEqual(["profiles"]);
   });
 
   it("exports and imports a JSON backup without a passphrase", async () => {

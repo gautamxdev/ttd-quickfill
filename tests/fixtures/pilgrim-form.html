@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tirumala Tirupati Devasthanams</title>
+  </head>
+  <body>
+    <!-- Synthetic copy of the live Sri PAT floating-label layout (NOT portal
+      assets). Like the live form, it wipes any value set by a script and keeps
+      only real user input. -->
+    <div class="page-title">Special Entry Darshan (Sri PAT)</div>
+    <div id="card">
+      <div>Pilgrim Details</div>
+      <div class="pilgrim-row">
+        <input class="floating-input" type="text" name="fname" id="p1-name" /><label>Name *</label>
+        <input class="floating-input" type="number" name="age" id="p1-age" /><label>Age *</label>
+        <input class="floating-input" type="text" name="gender" id="p1-gender" readonly /><label>Gender *</label>
+        <input class="floating-input" type="text" name="photoIdType" id="p1-idtype" readonly /><label>Photo ID Proof *</label>
+        <input class="floating-input" type="text" name="idProofNumber" id="p1-idno" /><label>Photo Id Number *</label>
+      </div>
+      <div class="pilgrim-row">
+        <input class="floating-input" type="text" name="fname" id="p2-name" /><label>Name *</label>
+        <input class="floating-input" type="number" name="age" id="p2-age" /><label>Age *</label>
+        <input class="floating-input" type="text" name="gender" id="p2-gender" readonly /><label>Gender *</label>
+        <input class="floating-input" type="text" name="photoIdType" id="p2-idtype" readonly /><label>Photo ID Proof *</label>
+        <input class="floating-input" type="text" name="idProofNumber" id="p2-idno" /><label>Photo Id Number *</label>
+      </div>
+      <input type="text" name="captcha" id="captchaInput" /><label>Enter Captcha</label>
+      <button type="button" id="continue" onclick="window.__continued = true">Continue</button>
+    </div>
+    <script>
+      window.__untrusted = 0;
+      document.getElementById("card").addEventListener("input", (e) => {
+        if (!e.isTrusted) {
+          window.__untrusted += 1;
+          e.target.value = "";
+        }
+      });
+    </script>
+  </body>
+</html>

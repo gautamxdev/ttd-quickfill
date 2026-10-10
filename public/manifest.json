@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "TTD QuickFill — SED & Angapradakshina",
+  "name": "TTD QuickFill — Paste Queue",
   "short_name": "TTD QuickFill",
-  "version": "0.2.0",
-  "description": "Independent, local-only helper for SED and Angapradakshina pilgrim details on the official TTD portal. Not affiliated with TTD.",
+  "version": "0.3.0",
+  "description": "Local paste queue for TTD pilgrim details: each real Cmd+V / Ctrl+V loads the next Name, Age or ID number. Not affiliated with TTD.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "sidePanel", "clipboardWrite"],
   "host_permissions": ["https://ttdevasthanams.ap.gov.in/*"],

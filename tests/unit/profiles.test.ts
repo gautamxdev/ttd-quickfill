@@ -3,10 +3,10 @@ import {
   deleteProfile,
   duplicateProfile,
   mergeImportedProfiles,
-  profileFillValues,
   uniqueLabel,
   upsertProfile,
 } from "../../src/lib/profiles";
+import { buildQueue } from "../../src/lib/queue";
 import {
   ageOn,
   getAgeStatus,
@@ -149,13 +149,9 @@ describe("5. Aadhaar validation", () => {
 });
 
 describe("6. names and IDs are preserved exactly", () => {
-  it("returns fill values identical to what was saved", () => {
+  it("queues values identical to what was saved", () => {
     const p = makeProfile({ fullName: "TEST P. O'NAME-ÉLAN", photoIdType: "Passport", photoIdNumber: "t1234567" });
-    const v = profileFillValues(p);
-    expect(v.fullName).toBe("TEST P. O'NAME-ÉLAN");
-    expect(v.photoIdNumber).toBe("t1234567");
-    expect(v.age).toBe("40");
-    expect(v.contactNumber).toBeUndefined();
+    expect(buildQueue([p]).map((i) => i.value)).toEqual(["TEST P. O'NAME-ÉLAN", "40", "t1234567"]);
   });
 
   it("upsert does not alter identity fields", () => {

@@ -31,7 +31,7 @@ export function ProfileSelector(props: Props) {
       </div>
       {profiles.length === 0 && <p className="hint">No profiles yet. Add one using the pilgrim's photo ID details.</p>}
       {profiles.length > 0 && (
-        <p className="hint">Selection order decides placement: the 1st selected pilgrim goes into the section labelled “Pilgrim 1”, and so on.</p>
+        <p className="hint">Tick pilgrims in the order of the rows on the TTD form: the 1st ticked pilgrim is pasted into the first row, and so on.</p>
       )}
       {profiles.map((p) => {
         const v = validateProfile(p, profiles);

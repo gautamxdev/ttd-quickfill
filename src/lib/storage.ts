@@ -1,30 +1,12 @@
-import type { ServiceId } from "../types/form";
 import type { PilgrimAddress, PilgrimProfile, ProfileStore } from "../types/profile";
 
-/**
- * Local-only persistence. Profiles are stored as JSON on this device.
- * Approvals contain only portal labels / control types / option texts.
- */
-export type ApprovalStatus = "reviewed" | "tested";
-
-export interface StructureApproval {
-  service: ServiceId;
-  structureId: string;
-  structure: string;
-  status: ApprovalStatus;
-  reviewedAt: string;
-  testedAt?: string;
-}
-
-export type ApprovalMap = Record<string, StructureApproval>;
-
+/** Local-only persistence. Profiles are stored as JSON on this device. */
 interface StoredShape {
   profiles?: ProfileStore;
-  approvals?: ApprovalMap;
-  /** Leftover from the old encrypted vault; discarded on load. */
-  vault?: unknown;
-  settings?: unknown;
 }
+
+/** Left by older versions (encrypted vault, reviewed form layouts); discarded on load. */
+const LEFTOVER_KEYS = ["vault", "settings", "approvals"];
 
 async function get<K extends keyof StoredShape>(key: K): Promise<StoredShape[K]> {
   const result = (await chrome.storage.local.get(key)) as StoredShape;
@@ -104,9 +86,9 @@ export function parseImportFile(text: string): ProfileStore {
 
 export const storage = {
   async loadProfiles(): Promise<PilgrimProfile[]> {
-    const leftover = await chrome.storage.local.get(["vault", "settings"]);
-    if ("vault" in leftover || "settings" in leftover) {
-      await chrome.storage.local.remove(["vault", "settings"]);
+    const leftover = await chrome.storage.local.get(LEFTOVER_KEYS);
+    if (LEFTOVER_KEYS.some((k) => k in leftover)) {
+      await chrome.storage.local.remove(LEFTOVER_KEYS);
     }
     const stored = await get("profiles");
     if (!stored) return [];
@@ -120,11 +102,6 @@ export const storage = {
   exportProfiles(profiles: readonly PilgrimProfile[]): string {
     return JSON.stringify({ version: 1, format: "ttd-quickfill-profiles", profiles }, null, 2);
   },
-
-  async loadApprovals(): Promise<ApprovalMap> {
-    return (await get("approvals")) ?? {};
-  },
-  saveApprovals: (approvals: ApprovalMap) => set("approvals", approvals),
 
   async clearAll(): Promise<void> {
     await chrome.storage.local.clear();

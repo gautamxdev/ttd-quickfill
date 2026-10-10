@@ -84,11 +84,11 @@ export function describeAgeStatus(status: AgeStatus): string | null {
     case "missing":
       return "Age is missing.";
     case "unconfirmed":
-      return "Age has not been confirmed. Review it before filling.";
+      return "Age has not been confirmed. Review it before pasting.";
     case "stale":
-      return `Age was last confirmed more than ${AGE_CONFIRMATION_MAX_DAYS} days ago. Review it before filling.`;
+      return `Age was last confirmed more than ${AGE_CONFIRMATION_MAX_DAYS} days ago. Review it before pasting.`;
     case "dob-conflict":
-      return "Saved age does not match the saved date of birth. Review it before filling.";
+      return "Saved age does not match the saved date of birth. Review it before pasting.";
     case "ok":
       return null;
   }

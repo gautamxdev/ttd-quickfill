@@ -1,10 +1,8 @@
 import { useRef, useState } from "react";
 
 interface Props {
-  approvalCount: number;
   onExport: () => Promise<void>;
   onImport: (fileText: string) => Promise<number>;
-  onForgetApprovals: () => Promise<void>;
   onDeleteAll: () => Promise<void>;
 }
 
@@ -55,15 +53,9 @@ export function Settings(props: Props) {
         </button>
       </div>
 
-      <h3 style={{ marginTop: 10 }}>Verified form layouts</h3>
-      <p className="hint">{props.approvalCount} reviewed layout(s) stored (labels only, no personal data).</p>
-      <button type="button" onClick={() => run(async () => (await props.onForgetApprovals(), "All layouts will need review again."))}>
-        Forget reviewed layouts
-      </button>
-
       <h3 style={{ marginTop: 10 }}>Delete all data</h3>
       <label className="field">
-        <span>Type DELETE to erase profiles and settings</span>
+        <span>Type DELETE to erase all saved pilgrims</span>
         <input type="text" value={deleteText} onChange={(e) => setDeleteText(e.target.value)} />
       </label>
       <button

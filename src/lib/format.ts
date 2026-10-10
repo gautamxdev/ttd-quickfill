@@ -1,4 +1,4 @@
-import type { SemanticKey } from "../types/form";
+import type { QueueField } from "../types/queue";
 
 export const OFFICIAL_PORTAL_URL = "https://ttdevasthanams.ap.gov.in/";
 export const APPROVED_HOSTNAME = "ttdevasthanams.ap.gov.in";
@@ -19,11 +19,8 @@ export function maskIdNumber(value: string): string {
   return `${"•".repeat(Math.min(value.length - 4, 8))}${value.slice(-4)}`;
 }
 
-const SENSITIVE_KEYS: ReadonlySet<SemanticKey> = new Set(["photoIdNumber", "contactNumber", "email"]);
-
 /** Value as shown in the side panel. Identity numbers are masked. */
-export function displayValue(key: SemanticKey | null, value: string | undefined): string {
-  if (value === undefined || value === "") return "—";
-  if (key && SENSITIVE_KEYS.has(key)) return maskIdNumber(value);
-  return value;
+export function displayValue(field: QueueField, value: string): string {
+  if (value === "") return "—";
+  return field === "photoIdNumber" ? maskIdNumber(value) : value;
 }

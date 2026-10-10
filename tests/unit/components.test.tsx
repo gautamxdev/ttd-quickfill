@@ -1,67 +1,142 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CopyAssist } from "../../src/sidepanel/components/CopyAssist";
-import { FillButton } from "../../src/sidepanel/components/FillButton";
-import { FillResults } from "../../src/sidepanel/components/FillResults";
-import { FieldMappingPreview } from "../../src/sidepanel/components/FieldMappingPreview";
+import { PasteQueue } from "../../src/sidepanel/components/PasteQueue";
 import { ProfileEditor } from "../../src/sidepanel/components/ProfileEditor";
-import { ServiceSelector } from "../../src/sidepanel/components/ServiceSelector";
 import { emptyProfile } from "../../src/lib/profiles";
-import { scanPage } from "../../src/content/scanner";
-import type { FillResponse } from "../../src/types/form";
 import { isTrustedUserEvent } from "../../src/sidepanel/user-gesture";
-import { copyText } from "../../src/lib/clipboard";
-import { loadFixture, makeProfile, officialLocation } from "../helpers";
+import { writeClipboard } from "../../src/lib/clipboard";
+import { sendToContent, type ActiveTab } from "../../src/lib/messaging";
+import type { ContentRequest, QueueState } from "../../src/types/queue";
+import { installChromeMock, makeProfile, type ChromeMock } from "../helpers";
 
 vi.mock("../../src/sidepanel/user-gesture", () => ({ isTrustedUserEvent: vi.fn(() => false) }));
-vi.mock("../../src/lib/clipboard", () => ({ copyText: vi.fn(async () => true) }));
+vi.mock("../../src/lib/clipboard", () => ({ writeClipboard: vi.fn(async () => true) }));
+vi.mock("../../src/lib/messaging", () => ({ sendToContent: vi.fn() }));
 const trusted = vi.mocked(isTrustedUserEvent);
-const copyTextMock = vi.mocked(copyText);
+const clipboard = vi.mocked(writeClipboard);
+const send = vi.mocked(sendToContent);
 
-beforeEach(() => trusted.mockReturnValue(false));
+const TTD_TAB: ActiveTab = { id: 7, url: "https://ttdevasthanams.ap.gov.in/booking", approved: true };
+const OTHER_TAB: ActiveTab = { id: 8, url: undefined, approved: false };
 
-describe("26. FillButton requires a trusted user click", () => {
-  it("ignores untrusted (script-generated) clicks", async () => {
-    const onFill = vi.fn();
-    render(<FillButton disabled={false} busy={false} onFill={onFill} />);
-    screen.getByRole("button", { name: "Fill Details" }).click();
-    await userEvent.click(screen.getByRole("button", { name: "Fill Details" }));
-    expect(onFill).not.toHaveBeenCalled();
-  });
-
-  it("fills once per trusted click", async () => {
-    trusted.mockReturnValue(true);
-    const onFill = vi.fn();
-    render(<FillButton disabled={false} busy={false} onFill={onFill} />);
-    await userEvent.click(screen.getByRole("button", { name: "Fill Details" }));
-    expect(onFill).toHaveBeenCalledTimes(1);
-  });
-
-  it("does nothing while disabled or busy", async () => {
-    trusted.mockReturnValue(true);
-    const onFill = vi.fn();
-    const { rerender } = render(<FillButton disabled busy={false} onFill={onFill} />);
-    await userEvent.click(screen.getByRole("button"));
-    rerender(<FillButton disabled={false} busy onFill={onFill} />);
-    await userEvent.click(screen.getByRole("button"));
-    expect(onFill).not.toHaveBeenCalled();
-  });
-
-  it("the real gesture check rejects untrusted events", async () => {
-    const real = await vi.importActual<typeof import("../../src/sidepanel/user-gesture")>("../../src/sidepanel/user-gesture");
-    expect(real.isTrustedUserEvent({ nativeEvent: new MouseEvent("click") })).toBe(false);
+let chromeMock: ChromeMock;
+beforeEach(() => {
+  chromeMock = installChromeMock();
+  trusted.mockReturnValue(false);
+  clipboard.mockClear();
+  clipboard.mockResolvedValue(true);
+  send.mockReset();
+  send.mockImplementation(async (_tab, msg: ContentRequest) => {
+    switch (msg.type) {
+      case "TTDQF_QUEUE_START":
+        return { status: "active", position: msg.position, total: msg.values.length, problem: null } satisfies QueueState;
+      case "TTDQF_QUEUE_SEEK":
+        return { status: "active", position: msg.position, total: 6, problem: null } satisfies QueueState;
+      default:
+        return { status: "idle", position: 0, total: 0, problem: null } satisfies QueueState;
+    }
   });
 });
 
-describe("ServiceSelector", () => {
-  it("offers exactly SED ₹300 and Angapradakshina", () => {
-    render(<ServiceSelector value={null} onChange={() => undefined} />);
-    const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(2);
-    expect(screen.getByLabelText("SED ₹300")).toBeInTheDocument();
-    expect(screen.getByLabelText("Angapradakshina")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/srivani/i)).toBeNull();
+const pilgrims = [
+  makeProfile({ id: "a", label: "Self", fullName: "TEST PILGRIM ONE", age: 40, photoIdNumber: "000011112222" }),
+  makeProfile({ id: "b", label: "Mother", fullName: "TEST PILGRIM TWO", age: 62, gender: "Female", photoIdType: "Passport", photoIdNumber: "P0000001" }),
+];
+
+function progress(state: QueueState, tabId = TTD_TAB.id) {
+  act(() => chromeMock.emitRuntimeMessage({ type: "TTDQF_QUEUE_PROGRESS", state }, { tab: { id: tabId } as chrome.tabs.Tab }));
+}
+
+describe("PasteQueue", () => {
+  it("previews the queue with masked ID numbers and what to pick by hand", () => {
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    expect(screen.getByText("Pilgrim 1 ← Self")).toBeInTheDocument();
+    expect(screen.getByText("Pilgrim 2 ← Mother")).toBeInTheDocument();
+    expect(screen.getByText("••••••••2222")).toBeInTheDocument();
+    expect(screen.queryByText("000011112222")).toBeNull();
+    expect(screen.getByText(/may be listed as “Aadhar Card”/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start paste queue" })).toBeEnabled();
+  });
+
+  it("cannot start off the TTD portal or without pilgrims", () => {
+    const { rerender } = render(<PasteQueue tab={OTHER_TAB} profiles={pilgrims} />);
+    expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
+    expect(screen.getByText(/sign in yourself and go to the pilgrim-details form/)).toBeInTheDocument();
+    rerender(<PasteQueue tab={TTD_TAB} profiles={[]} />);
+    expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
+    expect(screen.getByText("Select at least one pilgrim.")).toBeInTheDocument();
+  });
+
+  it("ignores an untrusted (script-generated) click", async () => {
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    expect(clipboard).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("Start copies the first name and arms the page; progress moves the Next box", async () => {
+    trusted.mockReturnValue(true);
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    expect(clipboard).toHaveBeenCalledWith("TEST PILGRIM ONE");
+    expect(send).toHaveBeenCalledWith(TTD_TAB, {
+      type: "TTDQF_QUEUE_START",
+      values: ["TEST PILGRIM ONE", "40", "000011112222", "TEST PILGRIM TWO", "62", "P0000001"],
+      position: 0,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("1 of 6");
+    expect(screen.getByRole("status")).toHaveTextContent("Pilgrim 1 · Name");
+
+    progress({ status: "active", position: 2, total: 6, problem: null });
+    expect(screen.getByRole("status")).toHaveTextContent("Pilgrim 1 · Photo ID number");
+    expect(screen.getByRole("status")).toHaveTextContent("••••••••2222");
+
+    progress({ status: "active", position: 5, total: 6, problem: null }, 99);
+    expect(screen.getByRole("status")).toHaveTextContent("3 of 6");
+  });
+
+  it("Back copies the previous value; mismatch is explained; done tells the user to check and submit", async () => {
+    trusted.mockReturnValue(true);
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    progress({ status: "active", position: 3, total: 6, problem: "mismatch" });
+    expect(screen.getByRole("alert")).toHaveTextContent(/not the queued value/);
+
+    clipboard.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "← Back" }));
+    expect(clipboard).toHaveBeenCalledWith("000011112222");
+    expect(send).toHaveBeenLastCalledWith(TTD_TAB, { type: "TTDQF_QUEUE_SEEK", position: 2 });
+
+    progress({ status: "done", position: 6, total: 6, problem: null });
+    expect(screen.getByText(/All 6 values pasted and the clipboard is cleared/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start again" })).toBeEnabled();
+  });
+
+  it("Stop disarms the page and clears the clipboard", async () => {
+    trusted.mockReturnValue(true);
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+    expect(send).toHaveBeenLastCalledWith(TTD_TAB, { type: "TTDQF_QUEUE_STOP" });
+    expect(clipboard).toHaveBeenLastCalledWith("");
+    expect(screen.getByRole("button", { name: "Start paste queue" })).toBeInTheDocument();
+  });
+
+  it("warns when the clipboard cannot be written", async () => {
+    trusted.mockReturnValue(true);
+    clipboard.mockResolvedValue(false);
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Could not put the value on the clipboard/);
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("user gesture check", () => {
+  it("the real check rejects untrusted events", async () => {
+    const real = await vi.importActual<typeof import("../../src/sidepanel/user-gesture")>("../../src/sidepanel/user-gesture");
+    expect(real.isTrustedUserEvent({ nativeEvent: new MouseEvent("click") })).toBe(false);
   });
 });
 
@@ -103,120 +178,5 @@ describe("ProfileEditor", () => {
   it("masks the ID number field by default", () => {
     render(<ProfileEditor profile={makeProfile()} others={[]} isNew={false} onSave={() => undefined} onCancel={() => undefined} />);
     expect(screen.getByLabelText("Photo ID number")).toHaveClass("masked");
-  });
-});
-
-describe("FieldMappingPreview", () => {
-  it("shows labels, chosen options and masked ID numbers; approval enables filling", async () => {
-    loadFixture("sed-form.html");
-    const scan = scanPage(document, officialLocation(), "sed").response;
-    const profile = makeProfile({ photoIdType: "Driving Licence", photoIdNumber: "DLTEST9876" });
-    const onApprove = vi.fn();
-    render(
-      <FieldMappingPreview
-        service="sed"
-        sections={[scan.sections[0]!]}
-        profiles={[profile]}
-        issues={scan.issues}
-        approval="unreviewed"
-        liveVerified={false}
-        onApprove={onApprove}
-      />,
-    );
-    expect(screen.getByText(/has not been verified against the live TTD form/)).toBeInTheDocument();
-    expect(screen.getByText("Option “Driving License”")).toBeInTheDocument();
-    expect(screen.getByText("••••••9876")).toBeInTheDocument();
-    expect(screen.queryByText("DLTEST9876")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /I have checked this mapping/ }));
-    expect(onApprove).toHaveBeenCalled();
-  });
-
-  it("cannot be approved while a used section is ambiguous", () => {
-    loadFixture("sed-form.html");
-    const scan = scanPage(document, officialLocation(), "sed").response;
-    render(
-      <FieldMappingPreview
-        service="sed"
-        sections={[scan.sections[0]!]}
-        profiles={[makeProfile()]}
-        issues={[{ critical: true, sectionIndex: 1, message: "ambiguous" }]}
-        approval="unreviewed"
-        liveVerified={false}
-        onApprove={() => undefined}
-      />,
-    );
-    expect(screen.getByRole("button", { name: /I have checked this mapping/ })).toBeDisabled();
-  });
-});
-
-describe("CopyAssist", () => {
-  it("copies the full name on a trusted click and shows the Gender option to click", async () => {
-    trusted.mockReturnValue(true);
-    copyTextMock.mockResolvedValue(true);
-    render(
-      <CopyAssist
-        service="sed"
-        profiles={[makeProfile({ fullName: "TEST PILGRIM ONE", gender: "Male" })]}
-        ready
-        reasons={[]}
-      />,
-    );
-    expect(
-      screen.getByText((_, node) => node?.tagName === "LI" && node.textContent === "Click Gender → Male"),
-    ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Copy Name" }));
-    expect(copyTextMock).toHaveBeenCalledWith("TEST PILGRIM ONE");
-    expect(screen.getByRole("button", { name: /Copied — paste on the page/ })).toBeInTheDocument();
-  });
-
-  it("does not copy from an untrusted click", async () => {
-    trusted.mockReturnValue(false);
-    copyTextMock.mockClear();
-    render(<CopyAssist service="sed" profiles={[makeProfile()]} ready reasons={[]} />);
-    await userEvent.click(screen.getByRole("button", { name: "Copy Name" }));
-    expect(copyTextMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("FillResults", () => {
-  const response: FillResponse = {
-    outcome: "completed",
-    blockReasons: [],
-    verifiedCount: 1,
-    expectedCount: 3,
-    results: [
-      { fieldId: "s1:fullName", sectionIndex: 1, key: "fullName", label: "Name", profileLabel: "One", status: "filled", expected: "TEST", actual: "TEST" },
-      { fieldId: "s1:age", sectionIndex: 1, key: "age", label: "Age", profileLabel: "One", status: "failed_rejected", expected: "40", actual: "" },
-      { fieldId: "s1:photoIdNumber", sectionIndex: 1, key: "photoIdNumber", label: "Photo ID Number", profileLabel: "One", status: "skipped_not_editable", expected: "000011112222" },
-    ],
-  };
-
-  it("reports exact counts and never claims full success with unresolved fields", () => {
-    render(<FillResults result={response} approvedOverwrites={[]} onToggleOverwrite={() => undefined} />);
-    expect(screen.getByText(/1 of 3 expected field\(s\) verified/)).toBeInTheDocument();
-    expect(screen.getByText(/2 item\(s\) need attention/)).toBeInTheDocument();
-    expect(screen.getByText("Failed — field rejected the value")).toBeInTheDocument();
-    expect(screen.queryByText("000011112222")).toBeNull();
-  });
-
-  it("lets the user approve overwriting a conflict", async () => {
-    const onToggle = vi.fn();
-    render(
-      <FillResults
-        result={{
-          outcome: "blocked",
-          blockReasons: ["1 field(s) already contain different values."],
-          verifiedCount: 0,
-          expectedCount: 1,
-          results: [{ fieldId: "s1:fullName", sectionIndex: 1, key: "fullName", label: "Name", profileLabel: "One", status: "conflict", expected: "A", actual: "B" }],
-        }}
-        approvedOverwrites={[]}
-        onToggleOverwrite={onToggle}
-      />,
-    );
-    expect(screen.getByText("Nothing was changed on the page.")).toBeInTheDocument();
-    const row = screen.getByText("Conflict — existing value differs").closest("tr")!;
-    await userEvent.click(within(row).getByRole("checkbox"));
-    expect(onToggle).toHaveBeenCalledWith("s1:fullName");
   });
 });

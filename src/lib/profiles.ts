@@ -1,5 +1,4 @@
 import type { PilgrimProfile } from "../types/profile";
-import type { SemanticKey } from "../types/form";
 
 export function newProfileId(): string {
   return crypto.randomUUID();
@@ -62,28 +61,4 @@ export function mergeImportedProfiles(
     out.push({ ...p, id: newProfileId(), label: uniqueLabel(p.label, out) });
   }
   return out;
-}
-
-/**
- * Values the profile can supply, keyed by semantic field. Values are returned
- * exactly as saved; absent values are omitted (reported as "missing" later).
- */
-export function profileFillValues(profile: PilgrimProfile): Partial<Record<SemanticKey, string>> {
-  const v: Partial<Record<SemanticKey, string>> = {};
-  const put = (k: SemanticKey, value: string | undefined | null) => {
-    if (value !== undefined && value !== null && value !== "") v[k] = value;
-  };
-  put("fullName", profile.fullName);
-  put("age", profile.age === null ? null : String(profile.age));
-  put("gender", profile.gender);
-  put("photoIdType", profile.photoIdType);
-  put("photoIdNumber", profile.photoIdNumber);
-  put("contactNumber", profile.contactNumber);
-  put("email", profile.email);
-  put("addressLine1", profile.address?.line1);
-  put("addressLine2", profile.address?.line2);
-  put("city", profile.address?.city);
-  put("state", profile.address?.state);
-  put("pincode", profile.address?.pincode);
-  return v;
 }

@@ -1,4 +1,4 @@
-import type { ContentRequest } from "../types/form";
+import type { ContentRequest } from "../types/queue";
 import { isApprovedUrl } from "./format";
 
 export interface ActiveTab {
