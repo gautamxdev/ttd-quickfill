@@ -20,10 +20,7 @@ You do **not** need to code. Chrome will not install this from the Chrome Web St
 1. Download **[ttd-quickfill.zip](./ttd-quickfill.zip)** from this repo (green **Code** button → **Download ZIP** is the whole project; the extension zip is the file named `ttd-quickfill.zip`).
 2. Unzip it. You should get a folder that contains `manifest.json` (not a folder inside another folder with the same name — open until you see `manifest.json`).
 3. Open Chrome and go to `chrome://extensions`.
-4. Turn on **Developer mode** (top-right).
-5. Click **Load unpacked**.
-6. Select that unzipped folder (the one with `manifest.json`).
-7. Pin **TTD QuickFill** if you like. Click the extension icon to open the side panel.
+4. And drag the zip file to extension menu
 
 To update later: download the new zip, unzip over the same folder (or a new folder), then click **Reload** on the extension card. Chrome keeps your saved pilgrims on this computer.
 
