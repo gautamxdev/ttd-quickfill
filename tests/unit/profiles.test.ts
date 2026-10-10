@@ -151,7 +151,7 @@ describe("5. Aadhaar validation", () => {
 describe("6. names and IDs are preserved exactly", () => {
   it("queues values identical to what was saved", () => {
     const p = makeProfile({ fullName: "TEST P. O'NAME-ÉLAN", photoIdType: "Passport", photoIdNumber: "t1234567" });
-    expect(buildQueue([p]).map((i) => i.value)).toEqual(["TEST P. O'NAME-ÉLAN", "40", "t1234567"]);
+    expect(buildQueue([p]).map((i) => i.value)).toEqual(["TEST P. O'NAME-ÉLAN", "t1234567"]);
   });
 
   it("upsert does not alter identity fields", () => {

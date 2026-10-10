@@ -103,8 +103,8 @@ export function PasteQueue({ tab, profiles }: Props) {
       <h2>Paste queue</h2>
       <p className="hint">
         Press <b>Start</b>, click Pilgrim 1’s <b>Name</b> box on the TTD page and press <b>{PASTE_KEY}</b>. After every
-        paste the next value is ready: Name → Age → Photo ID number, then the next pilgrim. Pick Gender and Photo ID
-        Proof yourself — those lists only accept real clicks.
+        paste the next value is ready: Name → Photo ID number, then the next pilgrim. In between, type the Age (TTD’s
+        Age box blocks {PASTE_KEY}) and pick Gender and Photo ID Proof yourself.
       </p>
 
       {!tab?.approved && (
@@ -159,8 +159,8 @@ export function PasteQueue({ tab, profiles }: Props) {
       )}
       {state?.status === "done" && (
         <div className="banner ok" role="status">
-          All {shown.length} values pasted and the clipboard is cleared. Check every field, pick Gender and Photo ID
-          Proof if you haven’t, complete the CAPTCHA yourself and submit.
+          All {shown.length} values pasted and the clipboard is cleared. Check every field (Age, Gender and Photo ID
+          Proof are yours to fill), complete the CAPTCHA yourself and submit.
         </div>
       )}
       {error && (
@@ -222,11 +222,12 @@ export function PasteQueue({ tab, profiles }: Props) {
                       {QUEUE_FIELD_LABELS[item.field]}: <span className="mono">{displayValue(item.field, item.value)}</span>
                     </li>
                   );
-                  if (item.field !== "age" || !hints) return [row];
+                  if (item.field !== "fullName" || !hints) return [row];
                   return [
                     row,
-                    <li key="pick" className="hint">
-                      Pick yourself: Gender → <b>{hints.gender || "—"}</b>, Photo ID Proof → <b>{hints.photoIdType || "—"}</b>
+                    <li key="manual" className="hint manual-step">
+                      Yourself: type Age <b>{hints.age || "—"}</b>, pick Gender → <b>{hints.gender || "—"}</b>, Photo ID
+                      Proof → <b>{hints.photoIdType || "—"}</b>
                     </li>,
                   ];
                 })}

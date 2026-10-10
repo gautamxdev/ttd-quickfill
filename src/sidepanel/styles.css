@@ -90,3 +90,4 @@ input.masked { -webkit-text-security: disc; }
 .queue-actions button.primary { flex: 1; padding: 8px; font-size: 14px; font-weight: 600; }
 .queue-item.done { color: var(--ok); }
 .queue-item.current { font-weight: 600; color: var(--maroon); }
+.manual-step { display: block; margin: 2px 0; }

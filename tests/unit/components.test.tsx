@@ -32,7 +32,7 @@ beforeEach(() => {
       case "TTDQF_QUEUE_START":
         return { status: "active", position: msg.position, total: msg.values.length, problem: null } satisfies QueueState;
       case "TTDQF_QUEUE_SEEK":
-        return { status: "active", position: msg.position, total: 6, problem: null } satisfies QueueState;
+        return { status: "active", position: msg.position, total: 4, problem: null } satisfies QueueState;
       default:
         return { status: "idle", position: 0, total: 0, problem: null } satisfies QueueState;
     }
@@ -82,34 +82,43 @@ describe("PasteQueue", () => {
     expect(clipboard).toHaveBeenCalledWith("TEST PILGRIM ONE");
     expect(send).toHaveBeenCalledWith(TTD_TAB, {
       type: "TTDQF_QUEUE_START",
-      values: ["TEST PILGRIM ONE", "40", "000011112222", "TEST PILGRIM TWO", "62", "P0000001"],
+      values: ["TEST PILGRIM ONE", "000011112222", "TEST PILGRIM TWO", "P0000001"],
       position: 0,
     });
-    expect(screen.getByRole("status")).toHaveTextContent("1 of 6");
+    expect(screen.getByRole("status")).toHaveTextContent("1 of 4");
     expect(screen.getByRole("status")).toHaveTextContent("Pilgrim 1 · Name");
 
-    progress({ status: "active", position: 2, total: 6, problem: null });
+    progress({ status: "active", position: 1, total: 4, problem: null });
     expect(screen.getByRole("status")).toHaveTextContent("Pilgrim 1 · Photo ID number");
     expect(screen.getByRole("status")).toHaveTextContent("••••••••2222");
 
-    progress({ status: "active", position: 5, total: 6, problem: null }, 99);
-    expect(screen.getByRole("status")).toHaveTextContent("3 of 6");
+    progress({ status: "active", position: 3, total: 4, problem: null }, 99);
+    expect(screen.getByRole("status")).toHaveTextContent("2 of 4");
+  });
+
+  it("tells the user to type the Age and pick Gender / Photo ID Proof after each Name", () => {
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    const manual = screen.getAllByText(/^Yourself: type Age/);
+    expect(manual.map((m) => m.textContent)).toEqual([
+      "Yourself: type Age 40, pick Gender → Male, Photo ID Proof → Aadhaar Card (may be listed as “Aadhar Card”)",
+      "Yourself: type Age 62, pick Gender → Female, Photo ID Proof → Passport",
+    ]);
   });
 
   it("Back copies the previous value; mismatch is explained; done tells the user to check and submit", async () => {
     trusted.mockReturnValue(true);
     render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
     await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
-    progress({ status: "active", position: 3, total: 6, problem: "mismatch" });
+    progress({ status: "active", position: 2, total: 4, problem: "mismatch" });
     expect(screen.getByRole("alert")).toHaveTextContent(/not the queued value/);
 
     clipboard.mockClear();
     await userEvent.click(screen.getByRole("button", { name: "← Back" }));
     expect(clipboard).toHaveBeenCalledWith("000011112222");
-    expect(send).toHaveBeenLastCalledWith(TTD_TAB, { type: "TTDQF_QUEUE_SEEK", position: 2 });
+    expect(send).toHaveBeenLastCalledWith(TTD_TAB, { type: "TTDQF_QUEUE_SEEK", position: 1 });
 
-    progress({ status: "done", position: 6, total: 6, problem: null });
-    expect(screen.getByText(/All 6 values pasted and the clipboard is cleared/)).toBeInTheDocument();
+    progress({ status: "done", position: 4, total: 4, problem: null });
+    expect(screen.getByText(/All 4 values pasted and the clipboard is cleared/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start again" })).toBeEnabled();
   });
 

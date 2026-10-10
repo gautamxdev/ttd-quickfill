@@ -5,8 +5,10 @@ A Manifest V3 Chrome extension for the pilgrim-details form on the official TTD 
 Save each pilgrim once. On the booking form you just press **Cmd+V** (Ctrl+V on Windows) in each box, and every paste loads the next value:
 
 ```text
-Pilgrim 1: Name → Age → Photo ID number → Pilgrim 2: Name → Age → Photo ID number → …
+Pilgrim 1: Name → Photo ID number → Pilgrim 2: Name → Photo ID number → …
 ```
+
+Age is **typed by hand**: TTD's Age box blocks Cmd+V, so it isn't in the queue. The panel shows each pilgrim's age next to their name.
 
 It works like a "paste stack" app, except the queue is built from your saved pilgrims.
 
@@ -44,7 +46,7 @@ If a TTD tab was already open, **reload that tab once** after installing or upda
 4. Click **Start paste queue**. Pilgrim 1's name is now on the clipboard.
 5. On the TTD page:
    - click **Name** → **Cmd+V**
-   - click **Age** → **Cmd+V**
+   - click **Age** → **type** the age (the panel shows it; paste is blocked there)
    - pick **Gender** and **Photo ID Proof** in their lists yourself (the panel shows which option, e.g. "Aadhaar Card (may be listed as Aadhar Card)")
    - click **Photo Id Number** → **Cmd+V**
    - repeat for the next pilgrim's row.
@@ -95,7 +97,7 @@ src/
     paste-queue.ts              The queue: trusted-paste check, exact-value check, loads the next value
     sender.ts                   Accepts messages only from this extension's own pages
   lib/
-    queue.ts                    Builds Name/Age/ID queue from profiles, readiness, Gender/ID pick hints
+    queue.ts                    Builds Name/ID queue from profiles, readiness, Age/Gender/ID hints
     clipboard.ts                Clipboard write (async API, falls back to a copy command; never moves focus)
     storage.ts                  chrome.storage.local wrapper, JSON backup import/export
     validation.ts               Profile rules, Aadhaar, stale-age detection
@@ -134,5 +136,5 @@ Last run (macOS, Node 26, Chromium via Playwright): typecheck and lint clean, 60
 ## Verification status
 
 - Verified by tests: the queue logic, the side panel, and real pastes in real Chromium against a **synthetic** copy of the live layout.
-- Not yet verified on the live portal: the queue relies on the live form accepting a normal Cmd+V in its Name, Age and Photo Id Number boxes. A paste you make yourself is real input, so it should be accepted, but it hasn't been tried on the live form yet. Do one run with **dummy** pilgrims first, and don't submit it.
+- On the live portal, Cmd+V works in the Name and Photo Id Number boxes. The Age box blocks paste, which is why Age is typed by hand.
 - Gender and Photo ID Proof stay manual on purpose. They are custom lists that only accept real clicks.

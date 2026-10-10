@@ -1,11 +1,11 @@
-export type QueueField = "fullName" | "age" | "photoIdNumber";
+/** Age is not queued: TTD's Age box cancels the Cmd/Ctrl+V keystroke, so it is typed by hand. */
+export type QueueField = "fullName" | "photoIdNumber";
 
-export const QUEUE_FIELDS: readonly QueueField[] = ["fullName", "age", "photoIdNumber"];
+export const QUEUE_FIELDS: readonly QueueField[] = ["fullName", "photoIdNumber"];
 
 /** Names as printed on the TTD pilgrim-details form. */
 export const QUEUE_FIELD_LABELS: Record<QueueField, string> = {
   fullName: "Name",
-  age: "Age",
   photoIdNumber: "Photo ID number",
 };
 

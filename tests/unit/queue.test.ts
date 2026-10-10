@@ -16,14 +16,12 @@ const two = makeProfile({
 });
 
 describe("building the queue", () => {
-  it("is Name, Age, Photo ID number per pilgrim, in selection order", () => {
+  it("is Name then Photo ID number per pilgrim, in selection order (Age is typed by hand)", () => {
     const items = buildQueue([one, two]);
     expect(items.map((i) => [i.pilgrim, i.field, i.value])).toEqual([
       [1, "fullName", "TEST PILGRIM ONE"],
-      [1, "age", "40"],
       [1, "photoIdNumber", "000011112222"],
       [2, "fullName", "TEST PILGRIM TWO"],
-      [2, "age", "62"],
       [2, "photoIdNumber", "P0000001"],
     ]);
     expect(buildQueue([two, one])[0]!.value).toBe("TEST PILGRIM TWO");
@@ -32,7 +30,7 @@ describe("building the queue", () => {
   it("the key changes with order or values", () => {
     expect(queueKey(buildQueue([one, two]))).toBe(queueKey(buildQueue([one, two])));
     expect(queueKey(buildQueue([one, two]))).not.toBe(queueKey(buildQueue([two, one])));
-    expect(queueKey(buildQueue([one]))).not.toBe(queueKey(buildQueue([{ ...one, age: 41 }])));
+    expect(queueKey(buildQueue([one]))).not.toBe(queueKey(buildQueue([{ ...one, fullName: "TEST PILGRIM X" }])));
   });
 
   it("needs complete, age-confirmed pilgrims", () => {
@@ -44,23 +42,23 @@ describe("building the queue", () => {
     expect(bad.reasons.join(" ")).toMatch(/not been confirmed/);
   });
 
-  it("shows which Gender and Photo ID option to click, with the TTD spelling", () => {
-    expect(pickHints(one)).toEqual({ gender: "Male", photoIdType: "Aadhaar Card (may be listed as “Aadhar Card”)" });
-    expect(pickHints(two)).toEqual({ gender: "Female", photoIdType: "Passport" });
+  it("shows the Age to type and which Gender / Photo ID option to click, with the TTD spelling", () => {
+    expect(pickHints(one)).toEqual({ age: "40", gender: "Male", photoIdType: "Aadhaar Card (may be listed as “Aadhar Card”)" });
+    expect(pickHints(two)).toEqual({ age: "62", gender: "Female", photoIdType: "Passport" });
   });
 
   it("matches pasted text exactly, forgiving only one trailing newline", () => {
-    expect(pasteMatches("40", "40")).toBe(true);
-    expect(pasteMatches("40\n", "40")).toBe(true);
-    expect(pasteMatches(" 40", "40")).toBe(false);
-    expect(pasteMatches("400", "40")).toBe(false);
+    expect(pasteMatches("TEST", "TEST")).toBe(true);
+    expect(pasteMatches("TEST\n", "TEST")).toBe(true);
+    expect(pasteMatches(" TEST", "TEST")).toBe(false);
+    expect(pasteMatches("TESTS", "TEST")).toBe(false);
   });
 });
 
 function setup() {
   document.body.innerHTML = `
     <input id="name" type="text" name="fname" />
-    <input id="age" type="number" name="age" />
+    <input id="idno" type="text" name="idProofNumber" />
     <input id="gender" type="text" name="gender" readonly />
     <input id="captcha" type="text" name="captcha" />
     <input id="pass" type="password" />`;
@@ -95,17 +93,15 @@ describe("paste queue in the page", () => {
 
   it("each real paste of the expected value loads the next one; the end clears the clipboard", async () => {
     const { queue, clipboard, paste } = setup();
-    expect(queue.start(values, 0)).toEqual({ status: "active", position: 0, total: 6, problem: null });
+    expect(queue.start(values, 0)).toEqual({ status: "active", position: 0, total: 4, problem: null });
     await paste("name", "TEST PILGRIM ONE");
-    expect(clipboard).toEqual(["40"]);
-    await paste("age", "40");
-    await paste("name", "000011112222");
+    expect(clipboard).toEqual(["000011112222"]);
+    await paste("idno", "000011112222");
     await paste("name", "TEST PILGRIM TWO");
-    await paste("age", "62");
-    expect(queue.state().position).toBe(5);
-    await paste("name", "P0000001");
-    expect(clipboard).toEqual(["40", "000011112222", "TEST PILGRIM TWO", "62", "P0000001", ""]);
-    expect(queue.state()).toEqual({ status: "done", position: 6, total: 6, problem: null });
+    expect(queue.state().position).toBe(3);
+    await paste("idno", "P0000001");
+    expect(clipboard).toEqual(["000011112222", "TEST PILGRIM TWO", "P0000001", ""]);
+    expect(queue.state()).toEqual({ status: "done", position: 4, total: 4, problem: null });
   });
 
   it("ignores untrusted pastes, and pastes into read-only, CAPTCHA or password fields", async () => {
@@ -161,6 +157,6 @@ describe("paste queue in the page", () => {
     queue.start(values, 3);
     expect(queue.seek(1).position).toBe(1);
     expect(queue.seek(-5).position).toBe(0);
-    expect(queue.seek(99)).toMatchObject({ status: "done", position: 6 });
+    expect(queue.seek(99)).toMatchObject({ status: "done", position: 4 });
   });
 });

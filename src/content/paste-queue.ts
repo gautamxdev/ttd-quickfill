@@ -57,6 +57,21 @@ export function createPasteQueue(env: PasteQueueEnv) {
     }
   };
 
+  const advanceFrom = (at: number) => {
+    if (status !== "active" || position !== at) return;
+    position = at + 1;
+    problem = null;
+    if (position >= values.length) {
+      status = "done";
+      values = values.map(() => "");
+      report();
+      void env.writeClipboard("");
+      return;
+    }
+    report();
+    void loadCurrent();
+  };
+
   return {
     state,
 
@@ -104,17 +119,7 @@ export function createPasteQueue(env: PasteQueueEnv) {
           report();
           return;
         }
-        position = at + 1;
-        problem = null;
-        if (position >= values.length) {
-          status = "done";
-          values = values.map(() => "");
-          report();
-          void env.writeClipboard("");
-          return;
-        }
-        report();
-        void loadCurrent();
+        advanceFrom(at);
       });
     },
   };

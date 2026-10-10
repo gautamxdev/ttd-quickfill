@@ -34,7 +34,6 @@ if (isApprovedUrl(location.href)) {
   });
 
   document.addEventListener("paste", (e) => queue.onPaste(e), true);
-
   chrome.runtime.onMessage.addListener((msg: ContentRequest, sender, sendResponse) => {
     if (!isTrustedSender(sender, chrome.runtime.id, chrome.runtime.getURL(""))) return false;
     try {

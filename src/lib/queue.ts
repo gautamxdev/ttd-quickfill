@@ -6,8 +6,6 @@ function fieldValue(profile: PilgrimProfile, field: QueueField): string {
   switch (field) {
     case "fullName":
       return profile.fullName;
-    case "age":
-      return profile.age === null ? "" : String(profile.age);
     case "photoIdNumber":
       return profile.photoIdNumber;
     default: {
@@ -17,7 +15,7 @@ function fieldValue(profile: PilgrimProfile, field: QueueField): string {
   }
 }
 
-/** Name, Age, Photo ID number for each pilgrim, in selection order. Values are exactly as saved. */
+/** Name, then Photo ID number, for each pilgrim in selection order. Values are exactly as saved. */
 export function buildQueue(profiles: readonly PilgrimProfile[]): QueueItem[] {
   return profiles.flatMap((p, i) =>
     QUEUE_FIELDS.map((field) => ({
@@ -66,10 +64,11 @@ const PHOTO_ID_LIST_NAMES: Record<string, string> = {
   "Driving Licence": "Driving License",
 };
 
-/** What to pick by hand in the Gender and Photo ID Proof lists (they only accept real clicks). */
-export function pickHints(profile: PilgrimProfile): { gender: string; photoIdType: string } {
+/** What to enter by hand: Age (blocks paste) and the Gender / Photo ID Proof lists (real clicks only). */
+export function pickHints(profile: PilgrimProfile): { age: string; gender: string; photoIdType: string } {
   const alt = PHOTO_ID_LIST_NAMES[profile.photoIdType];
   return {
+    age: profile.age === null ? "" : String(profile.age),
     gender: profile.gender,
     photoIdType: alt ? `${profile.photoIdType} (may be listed as “${alt}”)` : profile.photoIdType,
   };

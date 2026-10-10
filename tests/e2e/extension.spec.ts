@@ -77,7 +77,7 @@ async function pasteInto(page: Page, selector: string) {
   await page.keyboard.press("ControlOrMeta+V");
 }
 
-const VALUES = ["TEST PILGRIM ONE", "40", "000011112222", "TEST PILGRIM TWO", "62", "P0000001"];
+const VALUES = ["TEST PILGRIM ONE", "000011112222", "TEST PILGRIM TWO", "P0000001"];
 
 test("each real paste loads the next value: two pilgrims, then the clipboard is cleared", async ({ context, sw, requests }) => {
   const page = await context.newPage();
@@ -87,17 +87,32 @@ test("each real paste loads the next value: two pilgrims, then the clipboard is 
   // The panel puts the first value on the clipboard, then arms the page.
   await setClipboard(page, VALUES[0]!);
   const started = await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_START", values: VALUES, position: 0 });
-  expect(started).toEqual({ status: "active", position: 0, total: 6, problem: null });
+  expect(started).toEqual({ status: "active", position: 0, total: 4, problem: null });
 
-  const fields = ["#p1-name", "#p1-age", "#p1-idno", "#p2-name", "#p2-age", "#p2-idno"];
-  for (const [i, field] of fields.entries()) {
-    await pasteInto(page, field);
-    await expect(page.locator(field)).toHaveValue(VALUES[i]!);
-    await expect.poll(() => readClipboard(page)).toBe(VALUES[i + 1] ?? "");
+  const rows = [
+    { name: "#p1-name", age: "#p1-age", typedAge: "40", idno: "#p1-idno" },
+    { name: "#p2-name", age: "#p2-age", typedAge: "62", idno: "#p2-idno" },
+  ];
+  for (const [r, row] of rows.entries()) {
+    await pasteInto(page, row.name);
+    await expect(page.locator(row.name)).toHaveValue(VALUES[r * 2]!);
+    await expect.poll(() => readClipboard(page)).toBe(VALUES[r * 2 + 1]!);
+
+    // Like TTD's Age box, the fixture cancels Cmd/Ctrl+V; the user types the age and the queue is unaffected.
+    await pasteInto(page, row.age);
+    await expect(page.locator(row.age)).toHaveValue("");
+    await page.keyboard.type(row.typedAge);
+    await expect(page.locator(row.age)).toHaveValue(row.typedAge);
+    expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({ position: r * 2 + 1, problem: null });
+    expect(await readClipboard(page)).toBe(VALUES[r * 2 + 1]!);
+
+    await pasteInto(page, row.idno);
+    await expect(page.locator(row.idno)).toHaveValue(VALUES[r * 2 + 1]!);
+    await expect.poll(() => readClipboard(page)).toBe(VALUES[r * 2 + 2] ?? "");
   }
 
   const state = await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" });
-  expect(state).toEqual({ status: "done", position: 6, total: 6, problem: null });
+  expect(state).toEqual({ status: "done", position: 4, total: 4, problem: null });
 
   // The page's trusted-input check kept every value, and nothing else was touched.
   expect(await page.evaluate(() => (window as unknown as { __untrusted: number }).__untrusted)).toBe(0);
@@ -116,26 +131,26 @@ test("a paste of something else does not advance; Back re-arms an earlier value"
   await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_START", values: VALUES, position: 0 });
 
   await pasteInto(page, "#p1-name");
-  await expect.poll(() => readClipboard(page)).toBe("40");
+  await expect.poll(() => readClipboard(page)).toBe("000011112222");
 
   await setClipboard(page, "SOMETHING ELSE");
-  await pasteInto(page, "#p1-age");
+  await pasteInto(page, "#p1-idno");
   expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({ position: 1, problem: "mismatch" });
   expect(await readClipboard(page)).toBe("SOMETHING ELSE");
 
   // CAPTCHA box: the paste goes in (it's the user's own paste) but never counts.
-  await setClipboard(page, "40");
+  await setClipboard(page, "000011112222");
   await pasteInto(page, "#captchaInput");
   expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({ position: 1 });
 
   await setClipboard(page, VALUES[0]!);
   await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_SEEK", position: 0 });
-  await page.locator("#p2-name").fill("");
   await pasteInto(page, "#p2-name");
-  await expect.poll(() => readClipboard(page)).toBe("40");
+  await expect.poll(() => readClipboard(page)).toBe("000011112222");
 
   await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STOP" });
-  await pasteInto(page, "#p1-age");
+  await page.locator("#p1-idno").fill("");
+  await pasteInto(page, "#p1-idno");
   expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({ status: "idle" });
 });
 
