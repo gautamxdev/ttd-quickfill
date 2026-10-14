@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "TTD QuickFill — Paste Queue",
   "short_name": "TTD QuickFill",
-  "version": "0.3.1",
+  "version": "0.3.4",
   "description": "Local paste queue for TTD pilgrim details: each real Cmd+V / Ctrl+V loads the next Name or ID number. Not affiliated with TTD.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "sidePanel", "clipboardWrite"],
+  "permissions": ["storage", "sidePanel", "clipboardWrite", "scripting"],
   "host_permissions": ["https://ttdevasthanams.ap.gov.in/*"],
   "background": {
     "service_worker": "service-worker.js",

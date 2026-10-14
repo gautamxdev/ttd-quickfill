@@ -145,13 +145,37 @@ test("a paste of something else does not advance; Back re-arms an earlier value"
 
   await setClipboard(page, VALUES[0]!);
   await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_SEEK", position: 0 });
-  await pasteInto(page, "#p2-name");
+  await pasteInto(page, "#p1-name");
   await expect.poll(() => readClipboard(page)).toBe("000011112222");
 
   await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STOP" });
   await page.locator("#p1-idno").fill("");
   await pasteInto(page, "#p1-idno");
   expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({ status: "idle" });
+});
+
+test("a queued value in another pilgrim row is blocked and the queue stays on the correct row", async ({ context, sw }) => {
+  const page = await context.newPage();
+  await page.goto(FORM_URL);
+  await page.bringToFront();
+  await setClipboard(page, VALUES[0]!);
+  await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_START", values: VALUES, position: 0 });
+
+  await pasteInto(page, "#p2-name");
+  await expect(page.locator("#p2-name")).toHaveValue("");
+  expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({
+    position: 0,
+    problem: "wrong-row",
+  });
+
+  await pasteInto(page, "#p1-name");
+  await expect.poll(() => readClipboard(page)).toBe(VALUES[1]!);
+  await pasteInto(page, "#p2-idno");
+  await expect(page.locator("#p2-idno")).toHaveValue("");
+  expect(await sendToTab<QueueState>(sw, FORM_URL, { type: "TTDQF_QUEUE_STATE" })).toMatchObject({
+    position: 1,
+    problem: "wrong-row",
+  });
 });
 
 test("side panel renders under the extension CSP and shows the queue for a saved pilgrim", async ({ context, sw }) => {

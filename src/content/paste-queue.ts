@@ -1,5 +1,6 @@
 import { pasteMatches } from "../lib/queue";
 import type { PasteProblem, QueueState, QueueStatus } from "../types/queue";
+import { identifyPilgrimTarget } from "./form-target";
 
 /** The parts of a paste event the queue reads. */
 export interface PasteLike {
@@ -7,6 +8,7 @@ export interface PasteLike {
   target: EventTarget | null;
   defaultPrevented: boolean;
   clipboardData: Pick<DataTransfer, "getData"> | null;
+  preventDefault?: () => void;
 }
 
 export interface PasteQueueEnv {
@@ -106,6 +108,39 @@ export function createPasteQueue(env: PasteQueueEnv) {
       if (!target) return;
       const expected = values[position]!;
       const pasted = event.clipboardData?.getData("text/plain") ?? "";
+      const expectedField = position % 2 === 0 ? "fullName" : "photoIdNumber";
+      const expectedPilgrim = Math.floor(position / 2) + 1;
+      const detected = identifyPilgrimTarget(target);
+
+      // Only intercept an exact queued value. This leaves ordinary, unrelated
+      // pastes alone while preventing a profile value from landing in the
+      // wrong recognisable pilgrim box.
+      if (pasteMatches(pasted, expected)) {
+        if (detected.field === "other") {
+          event.preventDefault?.();
+          problem = "wrong-field";
+          report();
+          return;
+        }
+        if (detected.field === expectedField && detected.pilgrim === null) {
+          event.preventDefault?.();
+          problem = "layout";
+          report();
+          return;
+        }
+        if (detected.field === expectedField && detected.pilgrim !== expectedPilgrim) {
+          event.preventDefault?.();
+          problem = "wrong-row";
+          report();
+          return;
+        }
+        if (detected.field !== "unknown" && detected.field !== expectedField) {
+          event.preventDefault?.();
+          problem = "wrong-field";
+          report();
+          return;
+        }
+      }
       if (!pasteMatches(pasted, expected)) {
         problem = "mismatch";
         report();

@@ -26,9 +26,9 @@ function offenders(files: { path: string; text: string }[], re: RegExp): string[
 }
 
 describe("manifest uses minimum permissions", () => {
-  it("requests only storage, sidePanel, clipboardWrite and the exact official host", () => {
+  it("requests only its local storage, side panel, clipboard and helper-injection permissions", () => {
     expect(manifest.manifest_version).toBe(3);
-    expect(manifest.permissions).toEqual(["storage", "sidePanel", "clipboardWrite"]);
+    expect(manifest.permissions).toEqual(["storage", "sidePanel", "clipboardWrite", "scripting"]);
     expect(manifest.host_permissions).toEqual(["https://ttdevasthanams.ap.gov.in/*"]);
     expect(manifest).not.toHaveProperty("optional_permissions");
     expect(manifest).not.toHaveProperty("optional_host_permissions");

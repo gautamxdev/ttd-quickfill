@@ -25,6 +25,12 @@ export type PasteProblem =
   | "mismatch"
   /** The page cancelled the paste and the field does not contain the value. */
   | "blocked"
+  /** The queued value was pasted into a different field in the pilgrim row. */
+  | "wrong-field"
+  /** The queued value was pasted into a different pilgrim's row. */
+  | "wrong-row"
+  /** The pilgrim-details layout could not be safely identified. */
+  | "layout"
   /** The next value could not be put on the clipboard. */
   | "clipboard";
 

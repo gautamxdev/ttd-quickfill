@@ -18,6 +18,13 @@ function itemTitle(item: QueueItem): string {
   return `Pilgrim ${item.pilgrim} · ${QUEUE_FIELD_LABELS[item.field]}`;
 }
 
+/** A reload can race a final progress message; never resume past the saved queue. */
+function safeResumePosition(items: readonly QueueItem[], position: number): number {
+  if (items.length === 0) return 0;
+  if (!Number.isInteger(position) || position < 0 || position >= items.length) return 0;
+  return position;
+}
+
 export function PasteQueue({ tab, profiles }: Props) {
   const [items, setItems] = useState<QueueItem[] | null>(null);
   const [state, setState] = useState<QueueState | null>(null);
@@ -30,8 +37,9 @@ export function PasteQueue({ tab, profiles }: Props) {
   const shown = items ?? preview;
   const running = state?.status === "active";
   const paused = items !== null && state?.status === "idle";
+  const resumePosition = items === null ? 0 : safeResumePosition(items, resumeAt);
   const selectionChanged = items !== null && queueKey(items) !== queueKey(preview);
-  const position = running ? state.position : paused ? resumeAt : state?.status === "done" ? shown.length : -1;
+  const position = running ? state.position : paused ? resumePosition : state?.status === "done" ? shown.length : -1;
 
   const apply = useCallback((next: QueueState) => {
     setState(next);
@@ -77,7 +85,9 @@ export function PasteQueue({ tab, profiles }: Props) {
 
   const start = (list: QueueItem[], at: number) => async () => {
     if (!tab?.approved) throw new Error("Open the TTD pilgrim-details tab first.");
-    await copy(list[at]!.value);
+    const first = list[at];
+    if (!first) throw new Error("The saved queue position is unavailable. Stop the queue and start it again.");
+    await copy(first.value);
     setItems(list);
     apply(await sendToContent<QueueState>(tab, { type: "TTDQF_QUEUE_START", values: list.map((i) => i.value), position: at }));
   };
@@ -146,14 +156,27 @@ export function PasteQueue({ tab, profiles }: Props) {
           The page did not accept that paste. Check the field: paste again, or click <b>Skip</b> if the value is there.
         </div>
       )}
+      {running && state.problem === "wrong-row" && (
+        <div className="banner warn" role="alert">
+          That value belongs in Pilgrim {Math.floor(state.position / 2) + 1}. Nothing was pasted and the queue has stayed put.
+        </div>
+      )}
+      {running && state.problem === "wrong-field" && (
+        <div className="banner warn" role="alert">
+          That value belongs in the {state.position % 2 === 0 ? "Name" : "Photo ID number"} box. Nothing was pasted and the queue has stayed put.
+        </div>
+      )}
+      {running && state.problem === "layout" && (
+        <div className="banner err" role="alert">
+          QuickFill could not safely identify this pilgrim row. Reload the TTD form; if it persists, stop the queue and do not paste.
+        </div>
+      )}
       {running && state.problem === "clipboard" && (
         <div className="banner err" role="alert">
           The next value could not be put on the clipboard. Click <b>Copy again</b>.
         </div>
       )}
-      {paused && (
-        <div className="banner warn">The page reloaded, so the queue paused. Click Resume to continue from {itemTitle(shown[resumeAt]!)}.</div>
-      )}
+      {paused && <div className="banner warn">The page reloaded, so the queue paused. Click Resume to continue from {itemTitle(shown[resumePosition]!)}.</div>}
       {selectionChanged && (
         <div className="banner warn">Your pilgrim selection changed. Stop and start again to use the new list.</div>
       )}
@@ -180,7 +203,7 @@ export function PasteQueue({ tab, profiles }: Props) {
             {state?.status === "done" ? "Start again" : "Start paste queue"}
           </button>
         ) : paused ? (
-          <button type="button" className="primary" disabled={busy || !tab?.approved} onClick={(e) => void act(e, start(items, resumeAt))}>
+          <button type="button" className="primary" disabled={busy || !tab?.approved} onClick={(e) => void act(e, start(items, resumePosition))}>
             Resume
           </button>
         ) : (

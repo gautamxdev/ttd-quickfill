@@ -57,8 +57,16 @@ describe("building the queue", () => {
 
 function setup() {
   document.body.innerHTML = `
-    <input id="name" type="text" name="fname" />
-    <input id="idno" type="text" name="idProofNumber" />
+    <div class="pilgrim-row">
+      <input id="name" type="text" name="fname" /><label>Name</label>
+      <input id="age" type="number" name="age" /><label>Age</label>
+      <input id="idno" type="text" name="idProofNumber" /><label>Photo Id Number</label>
+    </div>
+    <div class="pilgrim-row">
+      <input id="name2" type="text" name="fname" /><label>Name</label>
+      <input id="age2" type="number" name="age" /><label>Age</label>
+      <input id="idno2" type="text" name="idProofNumber" /><label>Photo Id Number</label>
+    </div>
     <input id="gender" type="text" name="gender" readonly />
     <input id="captcha" type="text" name="captcha" />
     <input id="pass" type="password" />`;
@@ -78,7 +86,20 @@ function setup() {
   /** Simulates a real Cmd+V of `text` into the element, including the browser's insertion. */
   const paste = async (id: string, text: string, opts: Partial<PasteLike> = {}) => {
     const el = document.getElementById(id) as HTMLInputElement;
-    const event: PasteLike = { isTrusted: true, target: el, defaultPrevented: false, clipboardData: { getData: () => text }, ...opts };
+    const { defaultPrevented = false, ...rest } = opts;
+    let prevented = defaultPrevented;
+    const event: PasteLike = {
+      isTrusted: true,
+      target: el,
+      get defaultPrevented() {
+        return prevented;
+      },
+      clipboardData: { getData: () => text },
+      preventDefault: () => {
+        prevented = true;
+      },
+      ...rest,
+    };
     queue.onPaste(event);
     if (!event.defaultPrevented && !el.readOnly) el.value = text;
     pending.splice(0).forEach((fn) => fn());
@@ -97,9 +118,9 @@ describe("paste queue in the page", () => {
     await paste("name", "TEST PILGRIM ONE");
     expect(clipboard).toEqual(["000011112222"]);
     await paste("idno", "000011112222");
-    await paste("name", "TEST PILGRIM TWO");
+    await paste("name2", "TEST PILGRIM TWO");
     expect(queue.state().position).toBe(3);
-    await paste("idno", "P0000001");
+    await paste("idno2", "P0000001");
     expect(clipboard).toEqual(["000011112222", "TEST PILGRIM TWO", "P0000001", ""]);
     expect(queue.state()).toEqual({ status: "done", position: 4, total: 4, problem: null });
   });
@@ -124,6 +145,32 @@ describe("paste queue in the page", () => {
     expect(clipboard).toEqual([]);
     await paste("name", "TEST PILGRIM ONE");
     expect(queue.state()).toMatchObject({ position: 1, problem: null });
+  });
+
+  it("blocks an exact queued value in the wrong pilgrim row without advancing", async () => {
+    const { queue, notified, paste } = setup();
+    queue.start(values, 0);
+    await paste("name2", "TEST PILGRIM ONE");
+    expect(document.getElementById("name2")).toHaveValue("");
+    expect(queue.state()).toMatchObject({ position: 0, problem: "wrong-row" });
+    expect(notified.at(-1)).toMatchObject({ problem: "wrong-row" });
+
+    await paste("name", "TEST PILGRIM ONE");
+    await paste("idno2", "000011112222");
+    expect(document.getElementById("idno2")).toHaveValue("");
+    expect(queue.state()).toMatchObject({ position: 1, problem: "wrong-row" });
+  });
+
+  it("blocks an exact queued value in Age or the other queued field", async () => {
+    const { queue, paste } = setup();
+    queue.start(values, 0);
+    await paste("age", "TEST PILGRIM ONE");
+    expect((document.getElementById("age") as HTMLInputElement).value).toBe("");
+    expect(queue.state()).toMatchObject({ position: 0, problem: "wrong-field" });
+
+    await paste("name", "TEST PILGRIM ONE");
+    await paste("name", "000011112222");
+    expect(queue.state()).toMatchObject({ position: 1, problem: "wrong-field" });
   });
 
   it("does not advance when the page cancels the paste and the field stays empty", async () => {

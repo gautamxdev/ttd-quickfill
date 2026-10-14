@@ -132,6 +132,24 @@ describe("PasteQueue", () => {
     expect(screen.getByRole("button", { name: "Start paste queue" })).toBeInTheDocument();
   });
 
+  it("resumes from the saved item after a page reload", async () => {
+    trusted.mockReturnValue(true);
+    render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
+    await userEvent.click(screen.getByRole("button", { name: "Start paste queue" }));
+    progress({ status: "active", position: 2, total: 4, problem: null });
+    progress({ status: "idle", position: 0, total: 0, problem: null });
+
+    expect(screen.getByText(/queue paused.*Pilgrim 2 · Name/i)).toBeInTheDocument();
+    clipboard.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Resume" }));
+    expect(clipboard).toHaveBeenCalledWith("TEST PILGRIM TWO");
+    expect(send).toHaveBeenLastCalledWith(TTD_TAB, {
+      type: "TTDQF_QUEUE_START",
+      values: ["TEST PILGRIM ONE", "000011112222", "TEST PILGRIM TWO", "P0000001"],
+      position: 2,
+    });
+  });
+
   it("warns when the clipboard cannot be written", async () => {
     trusted.mockReturnValue(true);
     clipboard.mockResolvedValue(false);
