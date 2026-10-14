@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createPasteQueue, type PasteLike } from "../../src/content/paste-queue";
-import { buildQueue, computeQueueReadiness, pasteMatches, pickHints, queueKey } from "../../src/lib/queue";
+import { buildQueue, computeQueueReadiness, pasteMatches, photoIdTypeHint, queueKey } from "../../src/lib/queue";
 import type { QueueState } from "../../src/types/queue";
 import { makeProfile } from "../helpers";
 
@@ -33,18 +33,18 @@ describe("building the queue", () => {
     expect(queueKey(buildQueue([one]))).not.toBe(queueKey(buildQueue([{ ...one, fullName: "TEST PILGRIM X" }])));
   });
 
-  it("needs complete, age-confirmed pilgrims", () => {
+  it("needs a name and valid photo ID details, but does not require manually entered fields", () => {
     expect(computeQueueReadiness([]).reasons).toEqual(["Select at least one pilgrim."]);
     expect(computeQueueReadiness([one, two]).ready).toBe(true);
-    const bad = computeQueueReadiness([makeProfile({ label: "X", photoIdNumber: "123", ageLastConfirmedAt: undefined })]);
+    const bad = computeQueueReadiness([makeProfile({ label: "X", photoIdNumber: "123", age: null, gender: "", ageLastConfirmedAt: undefined })]);
     expect(bad.ready).toBe(false);
     expect(bad.reasons.join(" ")).toMatch(/12 digits/);
-    expect(bad.reasons.join(" ")).toMatch(/not been confirmed/);
+    expect(bad.reasons.join(" ")).not.toMatch(/age/i);
   });
 
-  it("shows the Age to type and which Gender / Photo ID option to click, with the TTD spelling", () => {
-    expect(pickHints(one)).toEqual({ age: "40", gender: "Male", photoIdType: "Aadhaar Card (may be listed as “Aadhar Card”)" });
-    expect(pickHints(two)).toEqual({ age: "62", gender: "Female", photoIdType: "Passport" });
+  it("shows the Photo ID option to select by hand, with the TTD spelling", () => {
+    expect(photoIdTypeHint(one)).toBe("Aadhaar Card (may be listed as “Aadhar Card”)");
+    expect(photoIdTypeHint(two)).toBe("Passport");
   });
 
   it("matches pasted text exactly, forgiving only one trailing newline", () => {

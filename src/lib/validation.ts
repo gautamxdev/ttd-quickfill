@@ -1,4 +1,4 @@
-import { GENDERS, type PilgrimProfile } from "../types/profile";
+import type { PilgrimProfile } from "../types/profile";
 
 export const AGE_CONFIRMATION_MAX_DAYS = 180;
 
@@ -102,35 +102,9 @@ export function validateProfile(
   const errors: ProfileValidation["errors"] = {};
   const warnings: string[] = [];
 
-  const label = profile.label;
-  if (!label.trim()) errors.label = "Label is required.";
-  else if (whitespaceProblem(label)) errors.label = whitespaceProblem(label)!;
-  else if (label.length > 40) errors.label = "Keep the label under 40 characters.";
-  else if (
-    others.some((o) => o.id !== profile.id && o.label.trim().toLowerCase() === label.trim().toLowerCase())
-  ) {
-    errors.label = "Another profile already uses this label.";
-  }
-
   if (!profile.fullName) errors.fullName = "Full name is required.";
   else if (whitespaceProblem(profile.fullName)) errors.fullName = whitespaceProblem(profile.fullName)!;
   else if (/\d/.test(profile.fullName)) errors.fullName = "Name should not contain digits.";
-
-  if (profile.age === null) errors.age = "Age is required.";
-  else if (!Number.isInteger(profile.age) || profile.age < 0 || profile.age > 120) {
-    errors.age = "Enter a whole number between 0 and 120.";
-  }
-
-  if (profile.dateOfBirth) {
-    const t = Date.parse(profile.dateOfBirth);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(profile.dateOfBirth) || Number.isNaN(t)) {
-      errors.dateOfBirth = "Use the format YYYY-MM-DD.";
-    } else if (t > now.getTime()) {
-      errors.dateOfBirth = "Date of birth cannot be in the future.";
-    }
-  }
-
-  if (!profile.gender || !GENDERS.includes(profile.gender)) errors.gender = "Select a gender.";
 
   if (!profile.photoIdType.trim()) errors.photoIdType = "Select a photo ID type.";
   else if (whitespaceProblem(profile.photoIdType)) errors.photoIdType = whitespaceProblem(profile.photoIdType)!;
@@ -149,9 +123,6 @@ export function validateProfile(
   }
 
   const ageStatus = getAgeStatus(profile, now);
-  const ageMessage = describeAgeStatus(ageStatus);
-  if (ageMessage && ageStatus !== "missing") warnings.push(ageMessage);
-
-  const complete = Object.keys(errors).length === 0 && ageStatus === "ok";
+  const complete = Object.keys(errors).length === 0;
   return { errors, warnings, ageStatus, complete };
 }

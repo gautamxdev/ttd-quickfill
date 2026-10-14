@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { PilgrimProfile } from "../../types/profile";
 import { maskIdNumber } from "../../lib/format";
-import { describeAgeStatus, validateProfile } from "../../lib/validation";
+import { validateProfile } from "../../lib/validation";
 
 interface Props {
   profiles: readonly PilgrimProfile[];
@@ -11,12 +11,11 @@ interface Props {
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  onConfirmAge: (id: string) => void;
   onCreate: () => void;
 }
 
 export function ProfileSelector(props: Props) {
-  const { profiles, selectedIds, onToggle, onMove, onEdit, onDuplicate, onDelete, onConfirmAge, onCreate } = props;
+  const { profiles, selectedIds, onToggle, onMove, onEdit, onDuplicate, onDelete, onCreate } = props;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   return (
@@ -37,43 +36,29 @@ export function ProfileSelector(props: Props) {
         const v = validateProfile(p, profiles);
         const order = selectedIds.indexOf(p.id);
         const selected = order !== -1;
-        const ageMsg = describeAgeStatus(v.ageStatus);
+        const displayName = p.fullName || p.label || "Unnamed pilgrim";
         return (
           <div key={p.id} className={`profile-card${selected ? " selected" : ""}`}>
             <input
               type="checkbox"
               checked={selected}
               onChange={() => onToggle(p.id)}
-              aria-label={`Select ${p.label}`}
+              aria-label={`Select ${displayName}`}
               style={{ marginTop: 3 }}
             />
             <div className="grow">
               <div>
-                <span className="label">{p.label}</span>
+                <span className="label">{displayName}</span>
                 {selected && <span className="badge order">Pilgrim {order + 1}</span>}
                 {v.complete ? (
                   <span className="badge ok">Complete</span>
                 ) : Object.keys(v.errors).length > 0 ? (
                   <span className="badge err">Incomplete</span>
-                ) : (
-                  <span className="badge warn">Review age</span>
-                )}
-              </div>
-              <div>{p.fullName || <i className="hint">No name</i>}</div>
-              <div className="hint">
-                {p.age ?? "—"} yrs · {p.gender || "—"} · {p.photoIdType || "No ID"} {p.photoIdNumber ? maskIdNumber(p.photoIdNumber) : ""}
+                ) : null}
               </div>
               <div className="hint">
-                Age last confirmed: {p.ageLastConfirmedAt ? new Date(p.ageLastConfirmedAt).toLocaleDateString() : "never"}
+                {p.photoIdType || "No ID"} {p.photoIdNumber ? maskIdNumber(p.photoIdNumber) : ""}
               </div>
-              {ageMsg && p.age !== null && (
-                <div className="banner warn">
-                  {ageMsg}{" "}
-                  <button type="button" className="small" onClick={() => onConfirmAge(p.id)}>
-                    Age {p.age} is correct
-                  </button>
-                </div>
-              )}
               <div className="actions">
                 <button type="button" className="small" onClick={() => onEdit(p.id)}>
                   Edit
@@ -97,7 +82,7 @@ export function ProfileSelector(props: Props) {
                 )}
                 {selected && selectedIds.length > 1 && (
                   <>
-                    <button type="button" className="small" disabled={order === 0} onClick={() => onMove(p.id, -1)} aria-label={`Move ${p.label} up`}>
+                    <button type="button" className="small" disabled={order === 0} onClick={() => onMove(p.id, -1)} aria-label={`Move ${displayName} up`}>
                       ↑
                     </button>
                     <button
@@ -105,7 +90,7 @@ export function ProfileSelector(props: Props) {
                       className="small"
                       disabled={order === selectedIds.length - 1}
                       onClick={() => onMove(p.id, 1)}
-                      aria-label={`Move ${p.label} down`}
+                      aria-label={`Move ${displayName} down`}
                     >
                       ↓
                     </button>

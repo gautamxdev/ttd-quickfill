@@ -143,10 +143,6 @@ export function App() {
         }}
         onDuplicate={(id) => void persistProfiles(duplicateProfile(profiles, id))}
         onDelete={(id) => void persistProfiles(deleteProfile(profiles, id))}
-        onConfirmAge={(id) => {
-          const p = profiles.find((x) => x.id === id);
-          if (p) void persistProfiles(upsertProfile(profiles, { ...p, ageLastConfirmedAt: new Date().toISOString() }));
-        }}
         onCreate={() => setView({ kind: "edit", profile: emptyProfile(), isNew: true })}
       />
       <PasteQueue tab={tab} profiles={selectedProfiles} />

@@ -1,6 +1,6 @@
 import type { PilgrimProfile } from "../types/profile";
 import { QUEUE_FIELDS, type QueueField, type QueueItem } from "../types/queue";
-import { describeAgeStatus, validateProfile } from "./validation";
+import { validateProfile } from "./validation";
 
 function fieldValue(profile: PilgrimProfile, field: QueueField): string {
   switch (field) {
@@ -21,7 +21,7 @@ export function buildQueue(profiles: readonly PilgrimProfile[]): QueueItem[] {
     QUEUE_FIELDS.map((field) => ({
       pilgrim: i + 1,
       profileId: p.id,
-      profileLabel: p.label,
+      profileLabel: p.fullName,
       field,
       value: fieldValue(p, field),
     })),
@@ -48,12 +48,10 @@ export function computeQueueReadiness(selected: readonly PilgrimProfile[], now: 
   if (selected.length === 0) reasons.push("Select at least one pilgrim.");
   for (const p of selected) {
     const v = validateProfile(p, [], now);
-    for (const key of ["fullName", "age", "gender", "photoIdType", "photoIdNumber"] as const) {
+    for (const key of ["fullName", "photoIdType", "photoIdNumber"] as const) {
       const error = v.errors[key];
-      if (error) reasons.push(`${p.label}: ${error}`);
+      if (error) reasons.push(`${p.fullName || "Pilgrim"}: ${error}`);
     }
-    const ageMessage = describeAgeStatus(v.ageStatus);
-    if (p.age !== null && ageMessage) reasons.push(`${p.label}: ${ageMessage}`);
   }
   return { ready: reasons.length === 0, reasons };
 }
@@ -64,12 +62,8 @@ const PHOTO_ID_LIST_NAMES: Record<string, string> = {
   "Driving Licence": "Driving License",
 };
 
-/** What to enter by hand: Age (blocks paste) and the Gender / Photo ID Proof lists (real clicks only). */
-export function pickHints(profile: PilgrimProfile): { age: string; gender: string; photoIdType: string } {
+/** The one manual selection whose value the extension still saves. */
+export function photoIdTypeHint(profile: PilgrimProfile): string {
   const alt = PHOTO_ID_LIST_NAMES[profile.photoIdType];
-  return {
-    age: profile.age === null ? "" : String(profile.age),
-    gender: profile.gender,
-    photoIdType: alt ? `${profile.photoIdType} (may be listed as “${alt}”)` : profile.photoIdType,
-  };
+  return alt ? `${profile.photoIdType} (may be listed as “${alt}”)` : profile.photoIdType;
 }

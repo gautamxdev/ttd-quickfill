@@ -189,15 +189,12 @@ test("side panel renders under the extension CSP and shows the queue for a saved
   await expect(page.getByText("TTD QuickFill")).toBeVisible();
   await expect(page.getByText(/not affiliated with TTD/)).toBeVisible();
   await page.getByRole("button", { name: "+ Add profile" }).click();
-  await page.getByLabel("Profile label").fill("Self");
   await page.getByLabel("Full name (as on photo ID)").fill("TEST PILGRIM ONE");
-  await page.getByLabel("Age", { exact: true }).fill("40");
-  await page.getByLabel("Gender").selectOption("Male");
   await page.getByLabel("Photo ID type").selectOption("Aadhaar Card");
   await page.getByLabel("Photo ID number").fill("0000 1111 2222");
   await page.getByRole("button", { name: "Save profile" }).click();
-  await page.getByLabel("Select Self").check();
-  await expect(page.getByText("Pilgrim 1 ← Self")).toBeVisible();
+  await page.getByLabel("Select TEST PILGRIM ONE").check();
+  await expect(page.getByText("Pilgrim 1 ← TEST PILGRIM ONE")).toBeVisible();
   await expect(page.getByText("••••••••2222", { exact: true })).toBeVisible();
   // The panel itself is the active tab here, not the TTD portal.
   await expect(page.getByRole("button", { name: "Start paste queue" })).toBeDisabled();

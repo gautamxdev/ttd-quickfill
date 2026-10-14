@@ -51,8 +51,8 @@ function progress(state: QueueState, tabId = TTD_TAB.id) {
 describe("PasteQueue", () => {
   it("previews the queue with masked ID numbers and what to pick by hand", () => {
     render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
-    expect(screen.getByText("Pilgrim 1 ← Self")).toBeInTheDocument();
-    expect(screen.getByText("Pilgrim 2 ← Mother")).toBeInTheDocument();
+    expect(screen.getByText("Pilgrim 1 ← TEST PILGRIM ONE")).toBeInTheDocument();
+    expect(screen.getByText("Pilgrim 2 ← TEST PILGRIM TWO")).toBeInTheDocument();
     expect(screen.getByText("••••••••2222")).toBeInTheDocument();
     expect(screen.queryByText("000011112222")).toBeNull();
     expect(screen.getByText(/may be listed as “Aadhar Card”/)).toBeInTheDocument();
@@ -96,12 +96,12 @@ describe("PasteQueue", () => {
     expect(screen.getByRole("status")).toHaveTextContent("2 of 4");
   });
 
-  it("tells the user to type the Age and pick Gender / Photo ID Proof after each Name", () => {
+  it("reminds the user to enter Age and Gender manually after each Name", () => {
     render(<PasteQueue tab={TTD_TAB} profiles={pilgrims} />);
-    const manual = screen.getAllByText(/^Yourself: type Age/);
+    const manual = screen.getAllByText(/^Yourself: enter Age/);
     expect(manual.map((m) => m.textContent)).toEqual([
-      "Yourself: type Age 40, pick Gender → Male, Photo ID Proof → Aadhaar Card (may be listed as “Aadhar Card”)",
-      "Yourself: type Age 62, pick Gender → Female, Photo ID Proof → Passport",
+      "Yourself: enter Age, choose Gender, and pick Photo ID Proof → Aadhaar Card (may be listed as “Aadhar Card”)",
+      "Yourself: enter Age, choose Gender, and pick Photo ID Proof → Passport",
     ]);
   });
 
@@ -169,14 +169,11 @@ describe("user gesture check", () => {
 
 describe("ProfileEditor", () => {
   async function fillBasics(user: ReturnType<typeof userEvent.setup>) {
-    await user.type(screen.getByLabelText("Profile label"), "Self");
     await user.type(screen.getByLabelText("Full name (as on photo ID)"), "TEST PILGRIM");
-    await user.type(screen.getByLabelText("Age"), "33");
-    await user.selectOptions(screen.getByLabelText("Gender"), "Female");
     await user.selectOptions(screen.getByLabelText("Photo ID type"), "Aadhaar Card");
   }
 
-  it("stores Aadhaar as 12 digits after removing spaces, and confirms the typed age", async () => {
+  it("stores Aadhaar as 12 digits after removing spaces without asking for manual TTD fields", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(<ProfileEditor profile={emptyProfile()} others={[]} isNew onSave={onSave} onCancel={() => undefined} />);
@@ -187,8 +184,9 @@ describe("ProfileEditor", () => {
     const saved = onSave.mock.calls[0]![0];
     expect(saved.photoIdNumber).toBe("000011112222");
     expect(saved.fullName).toBe("TEST PILGRIM");
-    expect(saved.age).toBe(33);
-    expect(saved.ageLastConfirmedAt).toBeTruthy();
+    expect(saved.label).toBe("TEST PILGRIM");
+    expect(saved.age).toBeNull();
+    expect(saved.gender).toBe("");
   });
 
   it("rejects a wrong-length Aadhaar number without saving", async () => {

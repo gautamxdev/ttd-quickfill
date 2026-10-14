@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { GENDERS, PHOTO_ID_TYPES, type Gender, type PilgrimProfile } from "../../types/profile";
+import { PHOTO_ID_TYPES, type PilgrimProfile } from "../../types/profile";
 import { isAadhaarType, normalizeAadhaarInput, validateProfile, type ProfileField } from "../../lib/validation";
 
 interface Props {
@@ -20,11 +20,7 @@ export function ProfileEditor({ profile, others, isNew, onSave, onCancel }: Prop
   const initialType = profile.photoIdType;
   const isStandard = (STANDARD_TYPES as readonly string[]).includes(initialType);
   const [d, setD] = useState({
-    label: profile.label,
     fullName: profile.fullName,
-    age: profile.age === null ? "" : String(profile.age),
-    dateOfBirth: profile.dateOfBirth ?? "",
-    gender: profile.gender as Gender | "",
     idChoice: initialType === "" ? "" : isStandard ? initialType : "Other",
     customIdType: isStandard ? "" : initialType,
     photoIdNumber: profile.photoIdNumber,
@@ -36,7 +32,6 @@ export function ProfileEditor({ profile, others, isNew, onSave, onCancel }: Prop
     state: profile.address?.state ?? "",
     pincode: profile.address?.pincode ?? "",
   });
-  const [confirmAge, setConfirmAge] = useState(isNew);
   const [showId, setShowId] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<ProfileField, string>>>({});
   const idNumberId = useId();
@@ -47,24 +42,18 @@ export function ProfileEditor({ profile, others, isNew, onSave, onCancel }: Prop
     e.preventDefault();
     const photoIdType = d.idChoice === "Other" ? d.customIdType : d.idChoice;
     const aadhaar = isAadhaarType(photoIdType) ? normalizeAadhaarInput(d.photoIdNumber) : null;
-    const ageNum = d.age.trim() === "" ? null : Number(d.age);
-    const ageChanged = ageNum !== profile.age;
     const address = { line1: opt(d.line1), line2: opt(d.line2), city: opt(d.city), state: opt(d.state), pincode: opt(d.pincode) };
     const next: PilgrimProfile = {
       ...profile,
-      label: d.label,
+      // The full name is used everywhere a profile needs to be identified.
+      // Keep a legacy label only so existing backups remain compatible.
+      label: profile.label || d.fullName,
       fullName: d.fullName,
-      age: ageNum,
-      dateOfBirth: opt(d.dateOfBirth),
-      gender: d.gender,
       photoIdType,
       photoIdNumber: aadhaar ?? d.photoIdNumber,
       contactNumber: opt(d.contactNumber),
       email: opt(d.email),
       address: Object.values(address).some(Boolean) ? address : undefined,
-      // Typing a new age is an explicit confirmation; otherwise only the checkbox confirms it.
-      ageLastConfirmedAt:
-        ageNum === null ? undefined : confirmAge || ageChanged ? new Date().toISOString() : profile.ageLastConfirmedAt,
     };
     const v = validateProfile(next, others);
     setErrors(v.errors);
@@ -78,54 +67,16 @@ export function ProfileEditor({ profile, others, isNew, onSave, onCancel }: Prop
       </span>
     ) : null;
 
-  const lastConfirmed = profile.ageLastConfirmedAt ? new Date(profile.ageLastConfirmedAt).toLocaleDateString() : "never";
-
   return (
     <form className="card" onSubmit={submit} noValidate aria-label={isNew ? "New pilgrim profile" : "Edit pilgrim profile"}>
-      <h3>{isNew ? "New pilgrim" : `Edit ${profile.label}`}</h3>
+      <h3>{isNew ? "New pilgrim" : `Edit ${profile.fullName}`}</h3>
       <p className="hint">Enter details exactly as on the pilgrim's photo ID. Values are saved as you type them.</p>
 
-      <label className="field">
-        <span>Profile label</span>
-        <input type="text" value={d.label} onChange={(e) => set("label", e.target.value)} placeholder="e.g. Self, Mother" />
-        {err("label")}
-      </label>
       <label className="field">
         <span>Full name (as on photo ID)</span>
         <input type="text" value={d.fullName} onChange={(e) => set("fullName", e.target.value)} autoComplete="off" />
         {err("fullName")}
       </label>
-      <div className="row">
-        <label className="field">
-          <span>Age</span>
-          <input type="number" min={0} max={120} value={d.age} onChange={(e) => set("age", e.target.value)} />
-          {err("age")}
-        </label>
-        <label className="field">
-          <span>Date of birth (optional)</span>
-          <input type="date" value={d.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} />
-          {err("dateOfBirth")}
-        </label>
-      </div>
-      {!isNew && <p className="hint">Age last confirmed: {lastConfirmed}</p>}
-      <label className="row tight" style={{ marginBottom: 8 }}>
-        <input type="checkbox" checked={confirmAge} onChange={(e) => setConfirmAge(e.target.checked)} />
-        <span>I confirm this age is current</span>
-      </label>
-
-      <label className="field">
-        <span>Gender</span>
-        <select value={d.gender} onChange={(e) => set("gender", e.target.value as Gender | "")}>
-          <option value="">Select…</option>
-          {GENDERS.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
-        {err("gender")}
-      </label>
-
       <label className="field">
         <span>Photo ID type</span>
         <select value={d.idChoice} onChange={(e) => set("idChoice", e.target.value)}>

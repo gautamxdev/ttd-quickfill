@@ -23,8 +23,8 @@ if Dragging the `.zip` itself onto Chrome didnt work. Unzip it first.
 2. In the side panel, add each pilgrim (**+ Add profile**) and tick them in the order of the form's rows.
 3. Click **Start paste queue**. For each row:
    - **Name**: Cmd+V
-   - **Age**: type it (TTD blocks paste here; the panel shows the age)
-   - **Gender** and **Photo ID Proof**: pick them (the panel shows which)
+   - **Age**: type it (TTD blocks paste here)
+   - **Gender** and **Photo ID Proof**: pick them yourself
    - **Photo Id Number**: Cmd+V
 4. Check the form, fill in the CAPTCHA and submit it yourself.
 

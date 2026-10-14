@@ -4,7 +4,7 @@ import { QUEUE_FIELD_LABELS, type ContentEvent, type QueueItem, type QueueState 
 import { writeClipboard } from "../../lib/clipboard";
 import { displayValue, OFFICIAL_PORTAL_URL } from "../../lib/format";
 import { sendToContent, type ActiveTab } from "../../lib/messaging";
-import { buildQueue, computeQueueReadiness, pickHints, queueKey } from "../../lib/queue";
+import { buildQueue, computeQueueReadiness, photoIdTypeHint, queueKey } from "../../lib/queue";
 import { isTrustedUserEvent } from "../user-gesture";
 
 interface Props {
@@ -229,7 +229,7 @@ export function PasteQueue({ tab, profiles }: Props) {
       {profiles.length > 0 &&
         groupByPilgrim(shown).map((group) => {
           const profile = profiles.find((p) => p.id === group[0]!.profileId);
-          const hints = profile ? pickHints(profile) : null;
+          const photoIdHint = profile ? photoIdTypeHint(profile) : "";
           return (
             <div key={group[0]!.pilgrim} className="copy-block">
               <div className="section-title">
@@ -245,12 +245,11 @@ export function PasteQueue({ tab, profiles }: Props) {
                       {QUEUE_FIELD_LABELS[item.field]}: <span className="mono">{displayValue(item.field, item.value)}</span>
                     </li>
                   );
-                  if (item.field !== "fullName" || !hints) return [row];
+                  if (item.field !== "fullName" || !photoIdHint) return [row];
                   return [
                     row,
                     <li key="manual" className="hint manual-step">
-                      Yourself: type Age <b>{hints.age || "—"}</b>, pick Gender → <b>{hints.gender || "—"}</b>, Photo ID
-                      Proof → <b>{hints.photoIdType || "—"}</b>
+                      Yourself: enter Age, choose Gender, and pick Photo ID Proof → <b>{photoIdHint}</b>
                     </li>,
                   ];
                 })}

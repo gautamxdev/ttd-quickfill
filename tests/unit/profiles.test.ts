@@ -42,16 +42,11 @@ describe("1. create, update and delete profiles", () => {
   });
 });
 
-describe("2. duplicate profile labels", () => {
-  it("rejects a label already used by another profile (case-insensitive)", () => {
+describe("2. legacy profile labels", () => {
+  it("does not require a profile label", () => {
     const others = [makeProfile({ id: "x", label: "Mother" })];
     const v = validateProfile(makeProfile({ id: "y", label: "mother" }), others);
-    expect(v.errors.label).toMatch(/already uses/);
-  });
-
-  it("allows a profile to keep its own label", () => {
-    const p = makeProfile({ id: "x", label: "Mother" });
-    expect(validateProfile(p, [p]).errors.label).toBeUndefined();
+    expect(v.errors.label).toBeUndefined();
   });
 
   it("generates unique labels for copies and imports", () => {
@@ -68,7 +63,7 @@ describe("3. required information", () => {
       makeProfile({ label: "", fullName: "", age: null, gender: "", photoIdType: "", photoIdNumber: "" }),
       [],
     );
-    expect(Object.keys(v.errors).sort()).toEqual(["age", "fullName", "gender", "label", "photoIdNumber", "photoIdType"].sort());
+    expect(Object.keys(v.errors).sort()).toEqual(["fullName", "photoIdNumber", "photoIdType"].sort());
     expect(v.complete).toBe(false);
   });
 
@@ -85,8 +80,8 @@ describe("3. required information", () => {
     expect(v.errors.pincode).toBeDefined();
   });
 
-  it("a fully valid, recently confirmed profile is complete", () => {
-    expect(validateProfile(makeProfile(), []).complete).toBe(true);
+  it("a fully valid profile is complete without a manually entered age or gender", () => {
+    expect(validateProfile(makeProfile({ age: null, gender: "", ageLastConfirmedAt: undefined }), []).complete).toBe(true);
   });
 });
 
@@ -111,10 +106,10 @@ describe("4. stale age detection", () => {
     expect(ageOn("1990-01-01", now)).toBe(36);
   });
 
-  it("an unconfirmed age makes the profile incomplete with a warning", () => {
+  it("an unconfirmed legacy age does not make a profile incomplete", () => {
     const v = validateProfile(makeProfile({ ageLastConfirmedAt: undefined }), [], now);
-    expect(v.complete).toBe(false);
-    expect(v.warnings.join(" ")).toMatch(/not been confirmed/);
+    expect(v.complete).toBe(true);
+    expect(v.warnings).toEqual([]);
   });
 });
 

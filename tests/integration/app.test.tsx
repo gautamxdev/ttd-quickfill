@@ -20,10 +20,7 @@ describe("side panel app", () => {
     expect(screen.getByText(/sign in yourself and go to the pilgrim-details form/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "+ Add profile" }));
-    await user.type(screen.getByLabelText("Profile label"), "Self");
     await user.type(screen.getByLabelText("Full name (as on photo ID)"), "TEST PANEL PILGRIM");
-    await user.type(screen.getByLabelText("Age"), "50");
-    await user.selectOptions(screen.getByLabelText("Gender"), "Male");
     await user.selectOptions(screen.getByLabelText("Photo ID type"), "Passport");
     await user.type(screen.getByLabelText("Photo ID number"), "T7654321");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
@@ -34,9 +31,9 @@ describe("side panel app", () => {
     await waitFor(() => expect(JSON.stringify(chromeMock.store)).toContain("TEST PANEL PILGRIM"));
     expect(JSON.stringify(chromeMock.store)).toContain("T7654321");
 
-    await user.click(screen.getByLabelText("Select Self"));
+    await user.click(screen.getByLabelText("Select TEST PANEL PILGRIM"));
     expect(screen.getByText("Paste queue")).toBeInTheDocument();
-    expect(screen.getByText("Pilgrim 1 ← Self")).toBeInTheDocument();
+    expect(screen.getByText("Pilgrim 1 ← TEST PANEL PILGRIM")).toBeInTheDocument();
     expect(screen.getByText("TEST PANEL PILGRIM", { selector: ".mono" })).toBeInTheDocument();
     expect(screen.getByText("••••4321")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
