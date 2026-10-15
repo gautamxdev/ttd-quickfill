@@ -50,6 +50,18 @@ describe("manifest uses minimum permissions", () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string };
     expect(manifest.version).toBe(pkg.version);
   });
+
+  it("declares the bundled TTD logo for the extension and toolbar", () => {
+    const expected = {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png",
+    };
+    expect(manifest.icons).toEqual(expected);
+    expect((manifest.action as { default_icon: unknown }).default_icon).toEqual(expected);
+    for (const path of Object.values(expected)) expect(existsSync(join(ROOT, "public", path))).toBe(true);
+  });
 });
 
 describe("hostname checks are exact", () => {
