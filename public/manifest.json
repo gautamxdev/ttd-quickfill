@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TTD QuickFill — Paste Queue",
   "short_name": "TTD QuickFill",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Local paste queue for TTD pilgrim details: each real Cmd+V / Ctrl+V loads the next Name or ID number. Not affiliated with TTD.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "sidePanel", "clipboardWrite", "scripting"],
