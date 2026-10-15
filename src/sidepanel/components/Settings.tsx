@@ -29,15 +29,18 @@ export function Settings(props: Props) {
         </div>
       )}
 
-      <h3>Backup</h3>
-      <p className="hint">Download or restore pilgrim profiles as a JSON file on this device.</p>
-      <div className="row tight" style={{ marginBottom: 8 }}>
+      <h3>Back up pilgrims</h3>
+      <p className="hint">Download a private backup file, or restore pilgrims from one.</p>
+      <div className="row tight settings-actions">
         <button type="button" onClick={() => run(async () => (await props.onExport(), "Backup downloaded."))}>
-          Export profiles
+          Download backup
         </button>
       </div>
-      <input ref={fileRef} type="file" accept="application/json,.json" aria-label="Backup file" />
-      <div className="row tight" style={{ marginTop: 6 }}>
+      <label className="file-picker">
+        <span>Choose a backup file</span>
+        <input ref={fileRef} type="file" accept="application/json,.json" aria-label="Backup file" />
+      </label>
+      <div className="row tight settings-actions">
         <button
           type="button"
           onClick={() =>
@@ -53,9 +56,9 @@ export function Settings(props: Props) {
         </button>
       </div>
 
-      <h3 style={{ marginTop: 10 }}>Delete all data</h3>
+      <h3 className="danger-heading">Delete saved pilgrims</h3>
       <label className="field">
-        <span>Type DELETE to erase all saved pilgrims</span>
+        <span>Type DELETE to permanently erase all saved pilgrims on this computer</span>
         <input type="text" value={deleteText} onChange={(e) => setDeleteText(e.target.value)} />
       </label>
       <button
@@ -64,7 +67,7 @@ export function Settings(props: Props) {
         disabled={deleteText !== "DELETE"}
         onClick={() => run(async () => (await props.onDeleteAll(), "All data deleted."))}
       >
-        Delete everything
+          Delete saved pilgrims
       </button>
     </section>
   );

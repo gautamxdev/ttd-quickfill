@@ -62,7 +62,7 @@ describe("PasteQueue", () => {
   it("cannot start off the TTD portal or without pilgrims", () => {
     const { rerender } = render(<PasteQueue tab={OTHER_TAB} profiles={pilgrims} />);
     expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
-    expect(screen.getByText(/sign in yourself and go to the pilgrim-details form/)).toBeInTheDocument();
+    expect(screen.getByText(/sign in yourself and open the pilgrim-details form/)).toBeInTheDocument();
     rerender(<PasteQueue tab={TTD_TAB} profiles={[]} />);
     expect(screen.getByRole("button", { name: "Start paste queue" })).toBeDisabled();
     expect(screen.getByText("Select at least one pilgrim.")).toBeInTheDocument();

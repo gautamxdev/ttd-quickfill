@@ -8,7 +8,7 @@ export function Header({ onSettings, settingsOpen }: Props) {
     <header className="header">
       <div>
         <h1>TTD QuickFill</h1>
-        <p className="subtitle">Paste queue for TTD pilgrim details</p>
+        <p className="subtitle">Safe paste helper for TTD pilgrim details</p>
       </div>
       <div className="header-actions">
         <button type="button" className="small" onClick={onSettings} aria-pressed={settingsOpen} aria-label="Settings">

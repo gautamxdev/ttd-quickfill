@@ -17,16 +17,16 @@ describe("side panel app", () => {
     expect(await screen.findByText("TTD QuickFill")).toBeInTheDocument();
     expect(screen.getByText(/not affiliated with TTD/)).toBeInTheDocument();
     expect(screen.queryByText(/passphrase/i)).toBeNull();
-    expect(screen.getByText(/sign in yourself and go to the pilgrim-details form/)).toBeInTheDocument();
+    expect(screen.getByText(/sign in yourself and open the pilgrim-details form/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "+ Add profile" }));
+    await user.click(screen.getByRole("button", { name: "+ Add pilgrim" }));
     await user.type(screen.getByLabelText("Full name (as on photo ID)"), "TEST PANEL PILGRIM");
     await user.selectOptions(screen.getByLabelText("Photo ID type"), "Passport");
     await user.type(screen.getByLabelText("Photo ID number"), "T7654321");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
     expect(await screen.findByText("TEST PANEL PILGRIM")).toBeInTheDocument();
-    expect(screen.getByText("Complete")).toBeInTheDocument();
+    expect(screen.queryByText("Complete")).toBeNull();
 
     await waitFor(() => expect(JSON.stringify(chromeMock.store)).toContain("TEST PANEL PILGRIM"));
     expect(JSON.stringify(chromeMock.store)).toContain("T7654321");

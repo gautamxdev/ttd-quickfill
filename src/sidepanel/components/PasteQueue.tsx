@@ -112,9 +112,8 @@ export function PasteQueue({ tab, profiles }: Props) {
     <section className="card" aria-label="Paste queue">
       <h2>Paste queue</h2>
       <p className="hint">
-        Press <b>Start</b>, click Pilgrim 1’s <b>Name</b> box on the TTD page and press <b>{PASTE_KEY}</b>. After every
-        paste the next value is ready: Name → Photo ID number, then the next pilgrim. In between, type the Age (TTD’s
-        Age box blocks {PASTE_KEY}) and pick Gender and Photo ID Proof yourself.
+        Press <b>Start</b>, click the correct pilgrim’s <b>Name</b> box, then press <b>{PASTE_KEY}</b>. QuickFill prepares
+        Name → Photo ID number for each selected pilgrim. Enter Age and choose Gender / Photo ID Proof yourself.
       </p>
 
       {!tab?.approved && (
@@ -123,7 +122,7 @@ export function PasteQueue({ tab, profiles }: Props) {
           <a href={OFFICIAL_PORTAL_URL} target="_blank" rel="noreferrer">
             ttdevasthanams.ap.gov.in
           </a>
-          , sign in yourself and go to the pilgrim-details form. If the tab was open before installing, reload it once.
+          , sign in yourself and open the pilgrim-details form.
         </div>
       )}
       {items === null && !readiness.ready && (
@@ -182,8 +181,8 @@ export function PasteQueue({ tab, profiles }: Props) {
       )}
       {state?.status === "done" && (
         <div className="banner ok" role="status">
-          All {shown.length} values pasted and the clipboard is cleared. Check every field (Age, Gender and Photo ID
-          Proof are yours to fill), complete the CAPTCHA yourself and submit.
+          All {shown.length} values pasted and the clipboard is cleared. Check every field, complete the CAPTCHA yourself
+          and submit.
         </div>
       )}
       {error && (

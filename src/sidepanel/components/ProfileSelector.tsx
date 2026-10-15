@@ -19,18 +19,18 @@ export function ProfileSelector(props: Props) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   return (
-    <section className="card" aria-label="Pilgrim profiles">
+    <section className="card" aria-label="Saved pilgrims">
       <div className="row" style={{ marginBottom: 6 }}>
-        <h2 style={{ margin: 0 }}>Pilgrims</h2>
+        <h2 style={{ margin: 0 }}>Saved pilgrims</h2>
         <div style={{ textAlign: "right" }}>
           <button type="button" className="small" onClick={onCreate}>
-            + Add profile
+            + Add pilgrim
           </button>
         </div>
       </div>
-      {profiles.length === 0 && <p className="hint">No profiles yet. Add one using the pilgrim's photo ID details.</p>}
+      {profiles.length === 0 && <p className="hint">No saved pilgrims yet. Add a name and photo ID details to begin.</p>}
       {profiles.length > 0 && (
-        <p className="hint">Tick pilgrims in the order of the rows on the TTD form: the 1st ticked pilgrim is pasted into the first row, and so on.</p>
+        <p className="hint">Select pilgrims in TTD row order: first selected fills row 1, second fills row 2, and so on.</p>
       )}
       {profiles.map((p) => {
         const v = validateProfile(p, profiles);
@@ -50,11 +50,9 @@ export function ProfileSelector(props: Props) {
               <div>
                 <span className="label">{displayName}</span>
                 {selected && <span className="badge order">Pilgrim {order + 1}</span>}
-                {v.complete ? (
-                  <span className="badge ok">Complete</span>
-                ) : Object.keys(v.errors).length > 0 ? (
+                {Object.keys(v.errors).length > 0 && (
                   <span className="badge err">Incomplete</span>
-                ) : null}
+                )}
               </div>
               <div className="hint">
                 {p.photoIdType || "No ID"} {p.photoIdNumber ? maskIdNumber(p.photoIdNumber) : ""}
@@ -64,7 +62,7 @@ export function ProfileSelector(props: Props) {
                   Edit
                 </button>
                 <button type="button" className="small" onClick={() => onDuplicate(p.id)}>
-                  Duplicate
+                  Copy
                 </button>
                 {pendingDelete === p.id ? (
                   <>

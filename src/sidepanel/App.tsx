@@ -146,10 +146,6 @@ export function App() {
         onCreate={() => setView({ kind: "edit", profile: emptyProfile(), isNew: true })}
       />
       <PasteQueue tab={tab} profiles={selectedProfiles} />
-      <p className="hint">
-        You do every paste and click yourself. QuickFill never types into the page, clicks or submits. Complete any
-        CAPTCHA/OTP yourself and submit manually.
-      </p>
     </>
   );
 }

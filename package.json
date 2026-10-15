@@ -1,6 +1,6 @@
 {
   "name": "ttd-quickfill",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "description": "TTD QuickFill — a local paste queue for pilgrim details on the official TTD portal.",
   "license": "UNLICENSED",

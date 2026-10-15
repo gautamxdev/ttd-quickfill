@@ -188,7 +188,7 @@ test("side panel renders under the extension CSP and shows the queue for a saved
   await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
   await expect(page.getByText("TTD QuickFill")).toBeVisible();
   await expect(page.getByText(/not affiliated with TTD/)).toBeVisible();
-  await page.getByRole("button", { name: "+ Add profile" }).click();
+  await page.getByRole("button", { name: "+ Add pilgrim" }).click();
   await page.getByLabel("Full name (as on photo ID)").fill("TEST PILGRIM ONE");
   await page.getByLabel("Photo ID type").selectOption("Aadhaar Card");
   await page.getByLabel("Photo ID number").fill("0000 1111 2222");
