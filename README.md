@@ -21,9 +21,8 @@ QuickFill never types into the TTD page, clicks anything, or submits a form. It 
 
 1. [Download `ttd-quickfill.zip`](https://github.com/gautamxdev/ttd-quickfill/raw/main/ttd-quickfill.zip) and unzip it.
 2. In Chrome, open `chrome://extensions`.
-3. Turn on **Developer mode**.
-4. Click **Load unpacked** and choose the unzipped `ttd-quickfill` folder—the folder containing `manifest.json`.
-5. Pin **TTD QuickFill**, then click its icon to open the side panel.
+3. Click **Load unpacked** and choose the unzipped `ttd-quickfill` folder—the folder containing `manifest.json`.
+4. Pin **TTD QuickFill**, then click its icon to open the side panel.
 
 To update later, unzip the newer download and use the reload icon for TTD QuickFill on `chrome://extensions`, selecting the new folder if Chrome asks for it.
 
